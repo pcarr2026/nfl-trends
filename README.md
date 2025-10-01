@@ -12,8 +12,7 @@ new change
 
 This is an edit
 
-???????????
->>>>>>> 413a33056f438e0cbfff8e119bb153e152adb6cd
+
 
 
 changed
@@ -28,5 +27,3 @@ CHANGES
 
 
 
-=======
->>>>>>> f5be7eb3c32edd06339bb699c61100e7f981ac76
