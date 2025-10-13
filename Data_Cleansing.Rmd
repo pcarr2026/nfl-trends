@@ -5,12 +5,14 @@ date: "2025-10-13"
 output: html_document
 ---
 
+Upload the Data 
 ```{r}
 library(readxl)
 nfl_data_file <- read_excel("nfl_data_file.xlsx")
 View(nfl_data_file)
 ```
 
+Remove the extra columns
 ```{r}
 nfl_data_file$...23 <- NULL
 nfl_data_file$...24 <- NULL
@@ -18,8 +20,10 @@ nfl_data_file$...25 <- NULL
 nfl_data_file$...26 <- NULL
 nfl_data_file$...27 <- NULL
 nfl_data_file$...28 <- NULL
+names(nfl_data_file)[22] <- "Over_Under_Hit"
 ```
 
+Check to make sure data is cleansed
 ```{r}
 View(nfl_data_file)
 ```
