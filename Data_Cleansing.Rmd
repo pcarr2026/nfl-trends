@@ -1,0 +1,26 @@
+---
+title: "Data Cleansing"
+author: "Aidan Dold"
+date: "2025-10-13"
+output: html_document
+---
+
+```{r}
+library(readxl)
+nfl_data_file <- read_excel("nfl_data_file.xlsx")
+View(nfl_data_file)
+```
+
+```{r}
+nfl_data_file$...23 <- NULL
+nfl_data_file$...24 <- NULL
+nfl_data_file$...25 <- NULL
+nfl_data_file$...26 <- NULL
+nfl_data_file$...27 <- NULL
+nfl_data_file$...28 <- NULL
+```
+
+```{r}
+View(nfl_data_file)
+```
+
