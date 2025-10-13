@@ -33,8 +33,4 @@ docs/
 po/*~
 # RStudio Connect folder
 rsconnect/
-<<<<<<< HEAD
-NFL-trends.Rproj
-=======
 nfl-trends.Rproj
->>>>>>> 413a33056f438e0cbfff8e119bb153e152adb6cd

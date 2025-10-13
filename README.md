@@ -1,7 +1,7 @@
 # nfl-trends
 Looking at nfl games and analyzing stats.
 
-<<<<<<< HEAD
+
 Aidan Dold
 
 
@@ -20,8 +20,15 @@ changed
 This is an edit
 Please give me an error
 I'm editing for an error
-<<<<<<< HEAD
+
 
 CHANGES
 
+
+
+sdiybt
+
+
 bruh
+
+fart gun
