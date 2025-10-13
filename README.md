@@ -1,11 +1,18 @@
 # nfl-trends
 Looking at nfl games and analyzing stats.
 
+
+Aidan Dold
+
+
+
+I actually changed it
+=======
 new change
 
 This is an edit
 
-???????????
+
 
 
 changed
@@ -14,9 +21,14 @@ This is an edit
 Please give me an error
 I'm editing for an error
 
+
 CHANGES
+
 
 
 sdiybt
 
 
+bruh
+
+fart gun
