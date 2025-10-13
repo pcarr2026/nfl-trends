@@ -29,6 +29,3 @@ CHANGES
 sdiybt
 
 
-bruh
-
-fart gun
