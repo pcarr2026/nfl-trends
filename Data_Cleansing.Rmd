@@ -9,7 +9,6 @@ Upload the Data
 ```{r}
 library(readxl)
 nfl_data_file <- read_excel("nfl_data_file.xlsx")
-View(nfl_data_file)
 ```
 
 Remove the extra columns
@@ -23,8 +22,8 @@ nfl_data_file$...28 <- NULL
 names(nfl_data_file)[22] <- "Over_Under_Hit"
 ```
 
-Check to make sure data is cleansed
 ```{r}
-View(nfl_data_file)
+write.csv(nfl_data_file, file = "cleaned_nfl_data.csv")
 ```
+
 
