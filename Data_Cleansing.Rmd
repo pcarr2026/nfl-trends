@@ -27,3 +27,9 @@ write.csv(nfl_data_file, file = "cleaned_nfl_data.csv")
 ```
 
 
+Reading in the csv file after cleaning it: 
+```{r}
+data <- read.csv("cleaned_nfl_data.csv")
+View(data)
+```
+
