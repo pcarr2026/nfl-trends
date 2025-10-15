@@ -1,0 +1,86 @@
+---
+title: "Leaflet_practice"
+output: html_document
+---
+
+```{r}
+library(leaflet)
+```
+
+Look at the city of Lexington
+```{r}
+leaflet() %>% setView(lng = -79.442778, lat = 37.783889, zoom = 12) %>% addTiles()
+```
+Looks at the world at night
+```{r}
+leaflet() %>% 
+  setView(lng = -79.442778, lat = 37.783889, zoom = 8) %>% 
+  addProviderTiles(provider = providers$NASAGIBS.ViirsEarthAtNight2012)
+```
+
+Provides a light map to emphasize things on the map
+```{r}
+leaflet() %>% 
+  setView(lng = -79.442778, lat = 37.783889, zoom = 12) %>% 
+  addProviderTiles(providers$CartoDB.Positron)
+```
+
+Shows the real time data of the weather in an area
+```{r}
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng = -79.442778, lat = 37.783889, zoom = 8) %>%
+  addWMSTiles(
+    "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+    layers = "nexrad-n0r-900913",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    attribution = "Weather data © 2012 IEM Nexrad"
+  )
+```
+
+Data that will be imposed on the map of lexington: 
+```{r}
+lex <- data.frame( lat    = c(37.789444 , 37.787673  ,  37.785624  )
+                 , lon    = c(-79.441725, -79.443623 , -79.441544  )
+                 , place  = c("Lab"     , "Classroom", "Thai food!")
+                 , rating = c(7         , 5          , 10          )
+                 , stringsAsFactors = FALSE
+                 )
+```
+
+Make markers on the map where there is data points: 
+```{r}
+leaflet(data = lex) %>% 
+  addTiles() %>% 
+  addMarkers(popup = ~place)
+```
+
+
+Add a marker to show the number of markers in an area:
+```{r}
+leaflet(data = lex) %>% 
+  setView(lng = -79.442778, lat = 37.783889, zoom = 10) %>% 
+  addTiles() %>% 
+  addMarkers(label = ~place, clusterOptions = markerClusterOptions())
+```
+
+Can add different kinds of circles with varying radius' based on quantitative data: 
+*Note: 
+In addCircleMarkers it specifies the size in pixels (image-land); no matter the zoom the circles are always the same size
+In addCircles it specifies the size in meters (real-world); so they get bigger or smaller when you zoom.
+```{r}
+leaflet(data = lex) %>% addTiles() %>%
+  addCircles(radius = ~rating, label = ~place)
+```
+
+
+
+
+
+
+
+
+
+
+
+
