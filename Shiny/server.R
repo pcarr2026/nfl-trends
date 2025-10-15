@@ -1,20 +1,34 @@
-function(input, output, session) {
-  
-  lats <- -90:90
-  lons <- -180:180
+library(shiny)
+library(leaflet)
+
+stadiums <- data.frame(
+  name = c("Lambeau Field", "AT&T Stadium", "MetLife Stadium", "Arrowhead Stadium", "SoFi Stadium"),
+  lat = c(44.5013, 32.7473, 40.8136, 39.0490, 33.9535),
+  lng = c(-88.0622, -97.0945, -74.0745, -94.4839, -118.3391)
+)
+
+shinyServer(function(input, output, session) {
   
   output$worldMap <- renderLeaflet({
-    leaflet() %>% 
-      setView(lng = -79.442778, lat = 37.783889, zoom = 5) %>% 
-      addTiles()
+    leaflet() %>%
+      addTiles() %>%
+      setView(lng = -95, lat = 39, zoom = 4) %>%
+      addCircles(
+        data = stadiums,
+        lng = ~lng,
+        lat = ~lat,
+        label = ~name,
+        radius = 50000,
+        color = "blue",
+        fillOpacity = 0.6
+      )
   })
   
-  observe({
-    # note the dummy use of the action button input
-    btn <- input$newButton
-    
+  observeEvent(input$stadiumSelect, {
+    selected <- stadiums[stadiums$name == input$stadiumSelect, ]
     leafletProxy("worldMap") %>%
-      setView(lng = sample(lons, 1), lat = sample(lats, 1), zoom = 3)
+      setView(lng = selected$lng, lat = selected$lat, zoom = 10) %>%
+      addPopups(lng = selected$lng, lat = selected$lat, popup = selected$name)
   })
-  
-}
+})
+
