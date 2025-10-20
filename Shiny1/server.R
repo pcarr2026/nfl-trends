@@ -28,6 +28,11 @@ server <- function(input, output, session) {
     updateSelectInput(session, "stadium_select", choices = stadium_choices)
   })
   
+  # NEW: Navigate to map when button is clicked
+  observeEvent(input$go_to_map, {
+    updateTabItems(session, "tabs", selected = "analytics")
+  })
+  
   # Reactive data based on selected metric
   map_data <- reactive({
     req(input$metric)
@@ -59,7 +64,6 @@ server <- function(input, output, session) {
   })
   
   # Observer to ADD circles when on the map tab
-  # THIS IS THE KEY FIX - Added input$tabs to trigger when switching tabs
   observe({
     req(input$tabs == "analytics")  # Only run when on Stadium Map tab
     req(input$metric, input$stadium_select)
@@ -74,8 +78,8 @@ server <- function(input, output, session) {
       selected_stadium <- data %>% filter(stadium == input$stadium_select)
       if(nrow(selected_stadium) > 0) {
         leafletProxy("map") %>%
-          setView(lng = selected_stadium$longitude[1], 
-                  lat = selected_stadium$latitude[1], 
+          setView(lng = selected_stadium$longitude[1],
+                  lat = selected_stadium$latitude[1],
                   zoom = 12)
       }
     } else {

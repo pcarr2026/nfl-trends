@@ -19,7 +19,7 @@ ui <- dashboardPage(
   dashboardBody(
     tabItems(
       # ----------------------------------------
-      # HOME TAB - FILLED IN WITH CONTENT
+      # HOME TAB - WITH NFL LOGO
       # ----------------------------------------
       tabItem(tabName = "home",
               fluidRow(
@@ -28,30 +28,43 @@ ui <- dashboardPage(
                            title = "Welcome to NFL Stadium Analytics",
                            tags$div(
                              style = "text-align: center; padding: 20px;",
-                             tags$img(src = "your_image.png", width = "400px", style = "margin-bottom: 20px;"),
-                             # To use an image, place it in a folder called "www" in your app directory
-                             # Or use a URL: tags$img(src = "https://example.com/image.png", ...)
                              
-                             tags$h3("Explore NFL Over/Under Trends Across Stadiums"),
+                             # NFL LOGO - UPDATED TO .jpg
+                             tags$img(src = "nfl_logo.jpg", width = "400px", style = "margin-bottom: 30px;"),
+                             
+                             tags$h1("NFL Over/Under Analysis", 
+                                     style = "color: #013369; font-weight: bold; margin-bottom: 10px;"),
+                             tags$h3("Stadium Performance Dashboard", 
+                                     style = "color: #D50A0A; margin-bottom: 30px;"),
+                             
                              tags$p(
-                               style = "font-size: 16px; line-height: 1.6; text-align: left; max-width: 800px; margin: 0 auto;",
+                               style = "font-size: 18px; line-height: 1.6; text-align: center; max-width: 800px; margin: 0 auto 20px auto;",
                                "This interactive dashboard analyzes over/under betting performance across NFL stadiums from 2000-2025.",
                                "Discover which venues consistently favor overs or unders, and explore geographical patterns in scoring trends."
                              ),
+                             
                              tags$br(),
-                             tags$h4("Features:"),
+                             tags$h4("Features:", style = "color: #013369;"),
                              tags$ul(
-                               style = "text-align: left; max-width: 600px; margin: 0 auto; font-size: 15px;",
+                               style = "text-align: left; max-width: 600px; margin: 0 auto 30px auto; font-size: 15px;",
                                tags$li("Interactive map showing over/under performance by stadium"),
                                tags$li("Toggle between overs and unders to compare trends"),
                                tags$li("Zoom to specific stadiums for detailed analysis"),
                                tags$li("Color-coded visualizations for easy pattern recognition")
                              ),
-                             tags$br(),
-                             tags$p(
-                               style = "font-size: 14px; color: #666;",
-                               "Click 'Stadium Map' in the sidebar to begin exploring the data."
-                             )
+                             
+                             # BUTTON TO NAVIGATE TO MAP
+                             actionButton("go_to_map", 
+                                          "Explore Stadium Map", 
+                                          icon = icon("map-marked-alt"),
+                                          class = "btn-lg",
+                                          style = "background-color: #013369; 
+                                                 color: white; 
+                                                 border: none; 
+                                                 font-size: 18px; 
+                                                 padding: 15px 40px;
+                                                 margin-top: 20px;
+                                                 font-weight: bold;")
                            )
                        )
                 )
