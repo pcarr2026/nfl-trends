@@ -80,7 +80,7 @@ server <- function(input, output, session) {
         leafletProxy("map") %>%
           setView(lng = selected_stadium$longitude[1],
                   lat = selected_stadium$latitude[1],
-                  zoom = 12)
+                  zoom = 10)
       }
     } else {
       leafletProxy("map") %>%
