@@ -33,5 +33,6 @@ docs/
 po/*~
 # RStudio Connect folder
 rsconnect/
+NFL-trends.Rproj
 nfl-trends.Rproj
 NFL-trends.Rproj
