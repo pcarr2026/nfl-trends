@@ -2,14 +2,14 @@ function(input, output, session) {
   
   # STEP 1: Load your stadium coordinates
   # Replace this with: stadium_coords <- read.csv("your_stadium_file.csv")
-  stadium_coords <- read.csv("/home/adold@ad.wlu.edu/NFL-trends/nfl_stadiums_coordinates.csv")
+  stadium_coords <- read.csv("../nfl_stadiums_coordinates.csv")
   
   # STEP 2: Load your game data with over/under results
   # Replace this with: game_data <- read.csv("your_game_data.csv")
   # Expected columns: stadium, result (where result is "Over" or "Under")
   # Example structure:
   set.seed(123)
-  game_data <- read.csv("/home/adold@ad.wlu.edu/NFL-trends/cleaned_nfl_data.csv")
+  game_data <- read.csv("../cleaned_nfl_data.csv")
   
   # STEP 3: Calculate overs and unders by stadium
   stadium_summary <- game_data %>%
