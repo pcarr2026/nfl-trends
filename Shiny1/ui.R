@@ -238,3 +238,18 @@ ui <- dashboardPage(
     )
   )
 )
+
+
+
+
+# More ideas: 
+# Add images for the stadiums on the map.
+# Consider ggplot instead of plotly
+# Change graph titles for betting analysis
+# Represent the betting odds in a diferent way (visual)
+# Add year filter for ROI calc
+# Upset predictor (Easier)
+# Predictive model based on historical data (Complex)
+# Cluster analysis: k means (input a number "k" and k means will put 5 dots on the space which will minimize the distance between stadiums)
+# ^ Cluster of stadiums that are better for certain teams than other teams
+# 
