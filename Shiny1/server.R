@@ -50,7 +50,7 @@ function(input, output, session) {
       mutate(
         value = if(metric_col == "overs") overs else unders,
         percentage = round(value / total_games * 100, 1)
-      )
+      ) 
   })
   
   # Create color palette
@@ -259,4 +259,216 @@ function(input, output, session) {
     HTML(paste0("<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 14px;'>", 
                 text, "</div>"))
   })
+  
+  # ========================================
+  # ROI CALCULATOR TAB - NEW CODE
+  # ========================================
+  
+  # Populate team dropdown dynamically based on strategy
+  observeEvent(input$roi_strategy, {
+    df <- nfl_data()
+    
+    # Get unique teams based on strategy
+    if (input$roi_strategy == "favorite") {
+      teams <- sort(unique(df$team_favorite_name))
+    } else if (input$roi_strategy == "underdog") {
+      # For underdogs, get teams that aren't the favorite
+      underdog_teams <- df %>%
+        mutate(underdog = ifelse(team_home == team_favorite_name, team_away, team_home)) %>%
+        pull(underdog) %>%
+        unique() %>%
+        sort()
+      teams <- underdog_teams
+    } else {
+      # For over/under, use all unique teams
+      teams <- sort(unique(c(df$team_home, df$team_away)))
+    }
+    
+    # Remove any NA values
+    teams <- teams[!is.na(teams)]
+    
+    updateSelectInput(session, "roi_team_filter",
+                      choices = c("All Teams" = "all", setNames(teams, teams)),
+                      selected = "all")
+  })
+  
+  # Calculate ROI results
+  roi_results <- reactive({
+    df <- nfl_data()
+    
+    # Determine which team we're betting on for each game
+    df <- df %>%
+      mutate(
+        bet_team = case_when(
+          input$roi_strategy == "favorite" ~ team_favorite_name,
+          input$roi_strategy == "underdog" ~ ifelse(team_home == team_favorite_name, team_away, team_home),
+          input$roi_strategy %in% c("over", "under") ~ team_home,
+          TRUE ~ NA_character_
+        )
+      )
+    
+    # Filter by team if not "All Teams"
+    if (input$roi_team_filter != "all") {
+      df <- df %>%
+        filter(bet_team == input$roi_team_filter)
+    }
+    
+    # Determine if bet won based on strategy
+    df <- df %>%
+      mutate(
+        bet_won = case_when(
+          input$roi_strategy == "favorite" ~ !is.na(fav_correct) & (fav_correct == "Yes" | fav_correct == TRUE | fav_correct == 1),
+          input$roi_strategy == "underdog" ~ !is.na(fav_correct) & (fav_correct == "No" | fav_correct == FALSE | fav_correct == 0),
+          input$roi_strategy == "over" ~ !is.na(over_hit) & (over_hit == "Over"),
+          input$roi_strategy == "under" ~ !is.na(over_hit) & (over_hit == "Under"),
+          TRUE ~ FALSE
+        ),
+        # Calculate odds multiplier based on strategy and spread
+        odds_multiplier = case_when(
+          # Underdog moneyline - better payouts for bigger underdogs
+          input$roi_strategy == "underdog" & !is.na(spread_favorite) ~ case_when(
+            abs(spread_favorite) <= 3 ~ 1.20,      # +120 odds
+            abs(spread_favorite) <= 7 ~ 1.80,      # +180 odds
+            abs(spread_favorite) <= 10 ~ 2.50,     # +250 odds
+            TRUE ~ 3.50                             # +350 odds for big underdogs
+          ),
+          # Favorite moneyline - worse payouts for bigger favorites
+          input$roi_strategy == "favorite" & !is.na(spread_favorite) ~ case_when(
+            abs(spread_favorite) <= 3 ~ 0.9091,    # -110 odds (risk 110 to win 100)
+            abs(spread_favorite) <= 7 ~ 0.6667,    # -150 odds (risk 150 to win 100)
+            abs(spread_favorite) <= 10 ~ 0.5000,   # -200 odds (risk 200 to win 100)
+            TRUE ~ 0.3333                           # -300 odds (risk 300 to win 100)
+          ),
+          TRUE ~ 0.9091  # -110 odds for over/under
+        ),
+        # Calculate profit using appropriate odds
+        profit = ifelse(bet_won, 
+                        input$roi_bet_amount * odds_multiplier, 
+                        -input$roi_bet_amount)
+      )
+    
+    # Remove any rows with NA profits
+    df <- df %>% filter(!is.na(profit) & !is.na(bet_won))
+    
+    # Calculate cumulative profit for chart
+    df <- df %>%
+      arrange(schedule_season, schedule_week) %>%
+      mutate(cumulative_profit = cumsum(profit))
+    
+    return(df)
+  })
+  
+  # Summary statistics
+  output$roi_total_games <- renderText({
+    nrow(roi_results())
+  })
+  
+  output$roi_win_rate <- renderText({
+    df <- roi_results()
+    if (nrow(df) == 0) return("0%")
+    wins <- sum(df$bet_won, na.rm = TRUE)
+    total <- nrow(df)
+    paste0(round(wins / total * 100, 1), "%")
+  })
+  
+  output$roi_profit <- renderText({
+    df <- roi_results()
+    if (nrow(df) == 0) return("$0")
+    total_profit <- sum(df$profit, na.rm = TRUE)
+    color <- ifelse(total_profit >= 0, "green", "red")
+    sign <- ifelse(total_profit >= 0, "+", "")
+    paste0(sign, "$", formatC(total_profit, format = "f", digits = 0, big.mark = ","))
+  })
+  
+  output$roi_percentage <- renderText({
+    df <- roi_results()
+    if (nrow(df) == 0) return("0%")
+    total_profit <- sum(df$profit, na.rm = TRUE)
+    total_wagered <- nrow(df) * input$roi_bet_amount
+    roi_pct <- (total_profit / total_wagered) * 100
+    sign <- ifelse(roi_pct >= 0, "+", "")
+    paste0(sign, round(roi_pct, 1), "%")
+  })
+  
+  # Cumulative profit chart
+  output$roi_plot <- renderPlotly({
+    df <- roi_results()
+    
+    if (nrow(df) == 0) {
+      return(plot_ly() %>% layout(title = "No games found for this team/strategy combination"))
+    }
+    
+    # Create game number
+    df$game_num <- 1:nrow(df)
+    
+    # Determine chart title based on filter
+    chart_title <- if (input$roi_team_filter == "all") {
+      "Cumulative Profit Over Time (All Teams)"
+    } else {
+      paste0("Cumulative Profit Over Time (", input$roi_team_filter, ")")
+    }
+    
+    plot_ly(df, x = ~game_num, y = ~cumulative_profit, type = 'scatter', mode = 'lines',
+            line = list(color = ~ifelse(cumulative_profit >= 0, 'green', 'red')),
+            hovertext = ~paste0("Game ", game_num, 
+                                "<br>", team_home, " vs ", team_away,
+                                "<br>Cumulative: $", round(cumulative_profit, 0)),
+            hoverinfo = 'text') %>%
+      layout(
+        title = chart_title,
+        xaxis = list(title = "Game Number"),
+        yaxis = list(title = "Cumulative Profit ($)"),
+        shapes = list(
+          list(type = "line", x0 = 0, x1 = nrow(df),
+               y0 = 0, y1 = 0,
+               line = list(color = "black", dash = "dash", width = 1))
+        )
+      )
+  })
+  
+  # Team performance table
+  output$roi_team_table <- renderTable({
+    df <- roi_results()
+    
+    # Determine which team to group by based on strategy
+    if (input$roi_strategy %in% c("favorite", "underdog")) {
+      # For spread bets, group by the team we're betting on
+      if (input$roi_strategy == "favorite") {
+        df <- df %>%
+          mutate(bet_team = team_favorite_name)
+      } else {
+        df <- df %>%
+          mutate(bet_team = ifelse(team_home == team_favorite_name, team_away, team_home))
+      }
+    } else {
+      # For over/under, group by home team
+      df <- df %>%
+        mutate(bet_team = team_home)
+    }
+    
+    # Calculate team stats
+    team_stats <- df %>%
+      group_by(bet_team) %>%
+      summarise(
+        Games = n(),
+        Wins = sum(bet_won),
+        `Win %` = round(mean(bet_won) * 100, 1),
+        Profit = sum(profit),
+        .groups = "drop"
+      ) %>%
+      arrange(desc(Profit)) %>%
+      head(10)  # Show top 10
+    
+    # Format profit with $ and +/- sign
+    team_stats <- team_stats %>%
+      mutate(
+        Profit = paste0(ifelse(Profit >= 0, "+$", "-$"), 
+                        formatC(abs(Profit), format = "f", digits = 0, big.mark = ","))
+      )
+    
+    names(team_stats)[1] <- "Team"
+    
+    return(team_stats)
+  })
+  
 }
