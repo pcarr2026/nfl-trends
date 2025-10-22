@@ -3,6 +3,8 @@ library(shiny)
 library(shinydashboard)
 library(leaflet)
 library(dplyr)
+library(tidyverse)
+library(plotly)
 
 ui <- dashboardPage(
   dashboardHeader(title = "NFL Analytics"),
@@ -12,6 +14,7 @@ ui <- dashboardPage(
       id = "tabs",  # IMPORTANT: Keep this ID for tracking active tab
       menuItem("Home", tabName = "home", icon = icon("home")),
       menuItem("Stadium Map", tabName = "analytics", icon = icon("chart-line")),
+      menuItem("Betting Analysis", tabName = "betting_analysis", icon = icon("dollar")),
       menuItem("Settings", tabName = "settings", icon = icon("gear"))
     )
   ),
@@ -99,6 +102,42 @@ ui <- dashboardPage(
                 )
               )
       ),
+            
+            # ----------------------------------------
+            # BETTING ANALYSIS TAB
+            # ----------------------------------------
+            tabItem(tabName = "betting_analysis",
+                    h2("NFL Betting Analysis (2000-2025)"),
+                    fluidRow(
+                      column(width = 4,
+                             box(width = NULL, status = "primary",
+                                 selectInput("bet_type", "What to Analyze:",
+                                             choices = list("Favorite Covered" = "fav_correct",
+                                                            "Over Hit" = "over_hit",
+                                                            "Under Hit" = "under_hit")),
+                                 
+                                 selectInput("factor", "Factor:",
+                                             choices = list("Season Type" = "season_type",
+                                                            "Stadium Type" = "stadium_type",
+                                                            "Temperature" = "temp_category",
+                                                            "Home Team" = "team_home")),
+                                 
+                                 hr(),
+                                 
+                                 h4("Graph Explanation:"),
+                                 uiOutput("explanation_text")
+                             )
+                      ),
+                      column(width = 8,
+                             box(width = NULL,
+                                 plotlyOutput("plot", height = "500px"),
+                                 br(),
+                                 tableOutput("table")
+                             )
+                      )
+                    )
+            ),
+
       
       # ----------------------------------------
       # SETTINGS TAB
