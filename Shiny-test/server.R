@@ -338,4 +338,344 @@ function(input, output, session) {
     return(team_stats)
   })
   
+<<<<<<< HEAD
 }
+=======
+  # ========== GAME PREDICTOR CODE ==========
+  
+  # Populate team dropdowns
+  observe({
+    data <- nfl_data()
+    teams <- sort(unique(c(data$team_home, data$team_away)))
+    teams <- teams[!is.na(teams)]
+    
+    updateSelectInput(session, "pred_home_team", choices = teams, selected = teams[1])
+    updateSelectInput(session, "pred_away_team", choices = teams, selected = teams[2])
+  })
+  
+  # Auto-fill spread and stadium when teams are selected
+  observeEvent(c(input$pred_home_team, input$pred_away_team), {
+    req(input$pred_home_team, input$pred_away_team)
+    
+    data <- nfl_data()
+    
+    # Find historical matchups
+    matchups <- data %>%
+      filter(team_home == input$pred_home_team & team_away == input$pred_away_team)
+    
+    if (nrow(matchups) > 0) {
+      # Calculate averages from historical matchups
+      avg_spread <- mean(matchups$spread_favorite, na.rm = TRUE)
+      most_common_stadium <- names(sort(table(matchups$stadium_type), decreasing = TRUE))[1]
+      
+      # Update inputs
+      updateNumericInput(session, "pred_spread", value = round(avg_spread, 1))
+      updateSelectInput(session, "pred_stadium", 
+                        selected = ifelse(is.na(most_common_stadium), "Outdoor", most_common_stadium))
+    } else {
+      # No historical data, use home team averages
+      home_games <- data %>% filter(team_home == input$pred_home_team)
+      
+      if (nrow(home_games) > 0) {
+        avg_spread <- mean(home_games$spread_favorite, na.rm = TRUE)
+        most_common_stadium <- names(sort(table(home_games$stadium_type), decreasing = TRUE))[1]
+        
+        updateNumericInput(session, "pred_spread", value = round(avg_spread, 1))
+        updateSelectInput(session, "pred_stadium", 
+                          selected = ifelse(is.na(most_common_stadium), "Outdoor", most_common_stadium))
+      }
+    }
+  })
+  
+  # Build Random Forest prediction model with new features
+  prediction_model <- reactive({
+    data <- nfl_data()
+    
+    # Calculate team statistics for each game (using data UP TO that point)
+    training_data <- data %>%
+      arrange(schedule_season, schedule_week) %>%
+      group_by(team_home) %>%
+      mutate(
+        home_games_played = row_number() - 1,
+        home_wins = cumsum(lag(winner == team_home, default = FALSE)),
+        home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5)
+      ) %>%
+      ungroup() %>%
+      group_by(team_away) %>%
+      mutate(
+        away_games_played = row_number() - 1,
+        away_wins = cumsum(lag(winner == team_away, default = FALSE)),
+        away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5)
+      ) %>%
+      ungroup() %>%
+      mutate(
+        home_won = (winner == team_home),
+        is_indoor = (stadium_type == "Indoor"),
+        # For model training, use calculated win percentages
+        home_strength = home_win_pct,
+        away_strength = away_win_pct,
+        # Generate synthetic rankings that correlate with win percentage
+        # Better teams (higher win %) get better rankings (lower numbers)
+        home_off_rank = pmax(1, pmin(32, round(33 - (home_win_pct * 25) + rnorm(n(), 0, 5)))),
+        home_def_rank = pmax(1, pmin(32, round(33 - (home_win_pct * 20) + rnorm(n(), 0, 6)))),
+        away_off_rank = pmax(1, pmin(32, round(33 - (away_win_pct * 25) + rnorm(n(), 0, 5)))),
+        away_def_rank = pmax(1, pmin(32, round(33 - (away_win_pct * 20) + rnorm(n(), 0, 6)))),
+        # Add spread multiplier to make it more dominant (multiply by 3 to increase importance)
+        spread_weighted = spread_favorite * 3
+      ) %>%
+      filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
+    
+    # Build Random Forest model with weighted spread and reduced home advantage
+    library(randomForest)
+    model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
+                            home_strength + away_strength + 
+                            home_off_rank + home_def_rank + away_off_rank + away_def_rank,
+                          data = training_data,
+                          ntree = 500,
+                          importance = TRUE,
+                          # Reduce tree depth to prevent overfitting on home field
+                          maxnodes = 50)
+    
+    list(model = model, data = training_data)
+  })
+  
+  # Make prediction when button is clicked
+  prediction_result <- eventReactive(input$predict_btn, {
+    model_info <- prediction_model()
+    
+    # Calculate win percentages from user input
+    home_total_games <- input$pred_home_wins + input$pred_home_losses
+    away_total_games <- input$pred_away_wins + input$pred_away_losses
+    
+    home_win_pct <- if(home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
+    away_win_pct <- if(away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
+    
+    # Create prediction data with user inputs
+    new_data <- data.frame(
+      spread_weighted = input$pred_spread * 3,  # Apply same weighting as training
+      is_indoor = (input$pred_stadium == "Indoor"),
+      schedule_week = input$pred_week,
+      home_strength = home_win_pct,
+      away_strength = away_win_pct,
+      home_off_rank = input$pred_home_off_rank,
+      home_def_rank = input$pred_home_def_rank,
+      away_off_rank = input$pred_away_off_rank,
+      away_def_rank = input$pred_away_def_rank
+    )
+    
+    # Get probability from Random Forest
+    prob <- predict(model_info$model, newdata = new_data, type = "prob")[,2]
+    
+    list(
+      prob_home = prob,
+      prob_away = 1 - prob,
+      home_record = paste0(input$pred_home_wins, "-", input$pred_home_losses),
+      away_record = paste0(input$pred_away_wins, "-", input$pred_away_losses)
+    )
+  })
+  
+  # Display prediction result
+  output$prediction_result <- renderUI({
+    result <- prediction_result()
+    
+    prob_home <- result$prob_home * 100
+    prob_away <- result$prob_away * 100
+    
+    home_color <- ifelse(prob_home > 50, "#28a745", "#dc3545")
+    away_color <- ifelse(prob_away > 50, "#28a745", "#dc3545")
+    
+    # Determine confidence level
+    confidence_diff <- abs(prob_home - 50)
+    confidence_level <- ifelse(confidence_diff > 30, "Very High",
+                               ifelse(confidence_diff > 20, "High",
+                                      ifelse(confidence_diff > 10, "Moderate", "Low")))
+    confidence_color <- ifelse(confidence_diff > 20, "#28a745",
+                               ifelse(confidence_diff > 10, "#ffc107", "#dc3545"))
+    
+    tagList(
+      fluidRow(
+        column(6,
+               div(style = paste0("background-color: ", home_color, "; color: white; padding: 30px; border-radius: 10px; text-align: center;"),
+                   h3(input$pred_home_team),
+                   p(paste0("(", result$home_record, ")"), style = "font-size: 14px; margin: 0;"),
+                   h1(paste0(round(prob_home, 1), "%")),
+                   p("Win Probability", style = "font-size: 16px;")
+               )
+        ),
+        column(6,
+               div(style = paste0("background-color: ", away_color, "; color: white; padding: 30px; border-radius: 10px; text-align: center;"),
+                   h3(input$pred_away_team),
+                   p(paste0("(", result$away_record, ")"), style = "font-size: 14px; margin: 0;"),
+                   h1(paste0(round(prob_away, 1), "%")),
+                   p("Win Probability", style = "font-size: 16px;")
+               )
+        )
+      ),
+      br(),
+      fluidRow(
+        column(6,
+               div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center;",
+                   p(strong("Predicted Winner:"), style = "margin: 0;"),
+                   h4(ifelse(prob_home > 50, input$pred_home_team, input$pred_away_team), 
+                      style = "margin: 5px 0; color: #28a745;")
+               )
+        ),
+        column(6,
+               div(style = paste0("background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border: 2px solid ", confidence_color, ";"),
+                   p(strong("Confidence Level:"), style = "margin: 0;"),
+                   h4(confidence_level, style = paste0("margin: 5px 0; color: ", confidence_color, ";"))
+               )
+        )
+      )
+    )
+  })
+  
+  # BETTING VALUE FINDER
+  output$value_bet_analysis <- renderUI({
+    req(input$predict_btn)
+    result <- prediction_result()
+    
+    prob_home <- result$prob_home
+    prob_away <- result$prob_away
+    
+    # Calculate implied probability from spread
+    spread <- input$pred_spread
+    implied_prob_home <- 0.5 + (spread * -0.025)
+    implied_prob_home <- max(0.2, min(0.8, implied_prob_home))
+    
+    # Calculate edge
+    edge_home <- (prob_home - implied_prob_home) * 100
+    edge_away <- (prob_away - (1 - implied_prob_home)) * 100
+    
+    value_threshold <- 5
+    
+    if (abs(edge_home) < value_threshold) {
+      tagList(
+        p(icon("info-circle"), strong(" No Strong Value Bet Found"), style = "font-size: 16px; color: #6c757d;"),
+        p("Model prediction is close to Vegas expectations. This is a fairly-priced game."),
+        p(paste0("Model edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "% (need >", value_threshold, "% for value)"))
+      )
+    } else if (edge_home > value_threshold) {
+      home_odds <- ifelse(spread < -7, -200, ifelse(spread < -3, -150, -110))
+      payout <- 100 / (abs(home_odds) / 100)
+      ev <- (prob_home * payout) - ((1 - prob_home) * 100)
+      
+      tagList(
+        div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
+            p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_home_team))), 
+              style = "font-size: 18px; color: #155724; margin: 0;")
+        ),
+        br(),
+        p(strong("Why it's valuable:")),
+        tags$ul(
+          tags$li(paste0("Model: ", round(prob_home * 100, 1), "% win probability")),
+          tags$li(paste0("Vegas: ~", round(implied_prob_home * 100, 1), "% implied")),
+          tags$li(paste0("Your Edge: +", round(edge_home, 1), "%"))
+        ),
+        p(strong(paste0("Expected Value: ", ifelse(ev > 0, "+", ""), "$", round(ev, 2), " per $100 bet"))),
+        p(ifelse(ev > 10, "🔥 Strong value!", ifelse(ev > 5, "✅ Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+      )
+    } else {
+      away_odds <- ifelse(spread > 7, 250, ifelse(spread > 3, 180, 120))
+      payout <- 100 * (away_odds / 100)
+      ev <- (prob_away * payout) - ((1 - prob_away) * 100)
+      
+      tagList(
+        div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
+            p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_away_team))), 
+              style = "font-size: 18px; color: #155724; margin: 0;")
+        ),
+        br(),
+        p(strong("Why it's valuable:")),
+        tags$ul(
+          tags$li(paste0("Model: ", round(prob_away * 100, 1), "% win probability")),
+          tags$li(paste0("Vegas: ~", round((1 - implied_prob_home) * 100, 1), "% implied")),
+          tags$li(paste0("Your Edge: +", round(abs(edge_away), 1), "%"))
+        ),
+        p(strong(paste0("Expected Value: ", ifelse(ev > 0, "+", ""), "$", round(ev, 2), " per $100 bet"))),
+        p(ifelse(ev > 10, "🔥 Strong value!", ifelse(ev > 5, "✅ Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+      )
+    }
+  })
+  
+  # Model accuracy
+  output$model_accuracy <- renderText({
+    model_info <- prediction_model()
+    
+    predictions <- predict(model_info$model, type = "response")
+    actual_winner <- model_info$data$home_won
+    
+    accuracy <- mean(predictions == actual_winner, na.rm = TRUE) * 100
+    paste0(round(accuracy, 1), "%")
+  })
+  
+  output$model_total_games <- renderText({
+    formatC(nrow(prediction_model()$data), format = "d", big.mark = ",")
+  })
+  
+  output$model_home_rate <- renderText({
+    model_info <- prediction_model()
+    home_rate <- mean(model_info$data$home_won, na.rm = TRUE) * 100
+    paste0(round(home_rate, 1), "%")
+  })
+  
+  # Variable importance plot
+  output$importance_plot <- renderPlotly({
+    model_info <- prediction_model()
+    
+    importance_df <- as.data.frame(importance(model_info$model))
+    importance_df$Variable <- c("Spread (Weighted)", "Indoor", "Week", "Home Win %", "Away Win %",
+                                "Home Off Rank", "Home Def Rank", "Away Off Rank", "Away Def Rank")
+    importance_df <- importance_df %>%
+      arrange(desc(MeanDecreaseGini)) %>%
+      mutate(Importance = MeanDecreaseGini) %>%
+      head(8)  # Show top 8
+    
+    plot_ly(importance_df, 
+            x = ~Importance, 
+            y = ~reorder(Variable, Importance),
+            type = 'bar', 
+            orientation = 'h',
+            marker = list(color = '#1f77b4'),
+            text = ~paste0(round(Importance, 1)),
+            textposition = 'outside',
+            hoverinfo = 'text',
+            hovertext = ~paste0(Variable, ": ", round(Importance, 1))) %>%
+      layout(
+        title = "",
+        xaxis = list(title = "Importance Score"),
+        yaxis = list(title = ""),
+        margin = list(l = 150)
+      )
+  })
+  
+  # Head-to-head history table
+  output$h2h_table <- renderTable({
+    req(input$pred_home_team, input$pred_away_team)
+    
+    data <- nfl_data()
+    
+    h2h <- data %>%
+      filter((team_home == input$pred_home_team & team_away == input$pred_away_team) |
+               (team_home == input$pred_away_team & team_away == input$pred_home_team)) %>%
+      arrange(desc(schedule_season), desc(schedule_week)) %>%
+      head(10) %>%
+      mutate(
+        Winner = ifelse(winner == team_home, team_home, team_away),
+        Margin = abs(score_home - score_away),
+        Spread = round(spread_favorite, 1)
+      ) %>%
+      select(schedule_season, schedule_week, team_home, team_away, Winner, Margin, Spread)
+    
+    if (nrow(h2h) == 0) {
+      return(data.frame(Message = "No historical matchups found in dataset"))
+    }
+    
+    names(h2h) <- c("Season", "Week", "Home", "Away", "Winner", "Margin", "Spread")
+    h2h
+  })
+  
+}
+>>>>>>> fc7c263c17194eaafd386dc81675360266cb71dc

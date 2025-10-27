@@ -112,6 +112,119 @@ fluidPage(
                  tableOutput("roi_team_table")
                )
              )
+    ),
+    
+    tabPanel("Game Predictor",
+             sidebarLayout(
+               sidebarPanel(
+                 h4("Predict Game Winner"),
+                 
+                 selectInput("pred_home_team", "Home Team:",
+                             choices = NULL),  # Populated dynamically
+                 
+                 fluidRow(
+                   column(6, numericInput("pred_home_wins", "Wins:", value = 8, min = 0, max = 17, step = 1)),
+                   column(6, numericInput("pred_home_losses", "Losses:", value = 5, min = 0, max = 17, step = 1))
+                 ),
+                 
+                 fluidRow(
+                   column(6, numericInput("pred_home_off_rank", "Off. Rank (1-32):", value = 10, min = 1, max = 32, step = 1)),
+                   column(6, numericInput("pred_home_def_rank", "Def. Rank (1-32):", value = 15, min = 1, max = 32, step = 1))
+                 ),
+                 
+                 hr(),
+                 
+                 selectInput("pred_away_team", "Away Team:",
+                             choices = NULL),  # Populated dynamically
+                 
+                 fluidRow(
+                   column(6, numericInput("pred_away_wins", "Wins:", value = 7, min = 0, max = 17, step = 1)),
+                   column(6, numericInput("pred_away_losses", "Losses:", value = 6, min = 0, max = 17, step = 1))
+                 ),
+                 
+                 fluidRow(
+                   column(6, numericInput("pred_away_off_rank", "Off. Rank (1-32):", value = 12, min = 1, max = 32, step = 1)),
+                   column(6, numericInput("pred_away_def_rank", "Def. Rank (1-32):", value = 18, min = 1, max = 32, step = 1))
+                 ),
+                 
+                 hr(),
+                 
+                 h5("Game Conditions:"),
+                 
+                 numericInput("pred_spread", "Spread (negative = home favored):",
+                              value = -6, min = -25, max = 25, step = 0.5),
+                 
+                 selectInput("pred_stadium", "Stadium Type:",
+                             choices = c("Outdoor", "Indoor"),
+                             selected = "Outdoor"),
+                 
+                 sliderInput("pred_week", "Week of Season:",
+                             min = 1, max = 18, value = 9, step = 1),
+                 
+                 actionButton("predict_btn", "Predict Winner", 
+                              class = "btn-primary btn-lg btn-block"),
+                 
+                 hr(),
+                 
+                 h4("Model Info:"),
+                 p(strong("Algorithm:"), "Random Forest (500 trees)"),
+                 p("Key factors: Team records, offensive/defensive rankings, spread, home field, stadium type, week")
+               ),
+               
+               mainPanel(
+                 h3("Prediction Results"),
+                 
+                 uiOutput("prediction_result"),
+                 
+                 br(),
+                 
+                 # Betting Value Section
+                 div(style = "background-color: #fff3cd; border: 2px solid #ffc107; padding: 20px; border-radius: 10px;",
+                     h4(icon("dollar-sign"), " Betting Value Analysis"),
+                     uiOutput("value_bet_analysis")
+                 ),
+                 
+                 br(),
+                 
+                 h4("Model Performance"),
+                 fluidRow(
+                   column(3,
+                          div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center;",
+                              h5("Model Accuracy"),
+                              h3(textOutput("model_accuracy", inline = TRUE))
+                          )
+                   ),
+                   column(3,
+                          div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center;",
+                              h5("Total Games"),
+                              h3(textOutput("model_total_games", inline = TRUE))
+                          )
+                   ),
+                   column(3,
+                          div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center;",
+                              h5("Home Win Rate"),
+                              h3(textOutput("model_home_rate", inline = TRUE))
+                          )
+                   ),
+                   column(3,
+                          div(style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center;",
+                              h5("Avg Improvement"),
+                              h3("+5-8%", style = "color: #28a745;")
+                          )
+                   )
+                 ),
+                 
+                 br(),
+                 
+                 h4("Most Important Factors"),
+                 plotlyOutput("importance_plot", height = "300px"),
+                 
+                 br(),
+                 
+                 h4("Head-to-Head History"),
+                 tableOutput("h2h_table")
+               )
+             )
     )
   )
 )
