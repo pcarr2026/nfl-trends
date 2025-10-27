@@ -261,7 +261,7 @@ function(input, output, session) {
   })
   
   # ========================================
-  # ROI CALCULATOR TAB - NEW CODE
+  # ROI CALCULATOR TAB - WITH YEAR FILTER
   # ========================================
   
   # Populate team dropdown dynamically based on strategy
@@ -292,9 +292,14 @@ function(input, output, session) {
                       selected = "all")
   })
   
-  # Calculate ROI results
+  # Calculate ROI results - NOW WITH YEAR FILTER
   roi_results <- reactive({
     df <- nfl_data()
+    
+    # Filter by year range (NEW!)
+    df <- df %>%
+      filter(schedule_season >= input$roi_year_range[1] & 
+               schedule_season <= input$roi_year_range[2])
     
     # Determine which team we're betting on for each game
     df <- df %>%
