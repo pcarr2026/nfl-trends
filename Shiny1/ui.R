@@ -140,7 +140,7 @@ ui <- dashboardPage(
       ),
       
       # ----------------------------------------
-      # ROI CALCULATOR TAB (NEW)
+      # ROI CALCULATOR TAB (WITH YEAR FILTER)
       # ----------------------------------------
       tabItem(tabName = "roi_calculator",
               h2("ROI Calculator"),
@@ -160,6 +160,10 @@ ui <- dashboardPage(
                            sliderInput("roi_bet_amount", "Bet Amount per Game:",
                                        min = 10, max = 500, value = 100, step = 10,
                                        pre = "$"),
+                           
+                           sliderInput("roi_year_range", "Year Range:",
+                                       min = 2000, max = 2025, value = c(2000, 2025),
+                                       step = 1, sep = ""),
                            
                            selectInput("roi_team_filter", "Filter by Team:",
                                        choices = c("All Teams" = "all")),
