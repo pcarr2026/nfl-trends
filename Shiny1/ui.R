@@ -423,3 +423,9 @@ ui <- dashboardPage(
     )
   )
 )
+
+
+
+## The offensive rating for the predictor doesn't work correctly
+## Fix the graph titles and button on home page
+## Add explanation for each tab
