@@ -338,9 +338,6 @@ function(input, output, session) {
     return(team_stats)
   })
   
-<<<<<<< HEAD
-}
-=======
   # ========== GAME PREDICTOR CODE ==========
   
   # Populate team dropdowns
@@ -678,4 +675,3 @@ function(input, output, session) {
   })
   
 }
->>>>>>> fc7c263c17194eaafd386dc81675360266cb71dc
