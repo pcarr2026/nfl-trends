@@ -17,7 +17,7 @@ ui <- dashboardPage(
       menuItem("Betting Analysis", tabName = "betting_analysis", icon = icon("dollar")),
       menuItem("ROI Calculator", tabName = "roi_calculator", icon = icon("calculator")),
       menuItem("Game Predictor", tabName = "game_predictor", icon = icon("football-ball")),
-      menuItem("Settings", tabName = "settings", icon = icon("gear"))
+      menuItem("Cluster Analysis", tabName = "cluster_analysis", icon = icon("project-diagram"))
     )
   ),
   
@@ -352,14 +352,74 @@ ui <- dashboardPage(
       ),
       
       # ----------------------------------------
-      # SETTINGS TAB
+      # CLUSTER ANALYSIS TAB
       # ----------------------------------------
-      tabItem(tabName = "settings",
-              h2("Settings"),
-              box(width = 12,
-                  "Configuration options here"
+      tabItem(tabName = "cluster_analysis",
+              h2("NFL Team Cluster Analysis"),
+              fluidRow(
+                column(width = 4,
+                       box(width = NULL, status = "primary",
+                           h4("Select 2 Factors for Clustering"),
+                           
+                           selectInput("cluster_factor1", "Factor 1 (X-Axis):",
+                                       choices = list(
+                                         "Win Percentage" = "win_pct",
+                                         "Average Points Scored" = "avg_points_scored",
+                                         "Average Points Allowed" = "avg_points_allowed",
+                                         "Point Differential" = "point_diff",
+                                         "Over Hit Rate" = "over_rate",
+                                         "Under Hit Rate" = "under_rate",
+                                         "Favorite Cover Rate (as favorite)" = "fav_cover_rate",
+                                         "Underdog Cover Rate (as underdog)" = "dog_cover_rate",
+                                         "Home Win Rate" = "home_win_rate",
+                                         "Away Win Rate" = "away_win_rate"
+                                       ),
+                                       selected = "win_pct"),
+                           
+                           selectInput("cluster_factor2", "Factor 2 (Y-Axis):",
+                                       choices = list(
+                                         "Win Percentage" = "win_pct",
+                                         "Average Points Scored" = "avg_points_scored",
+                                         "Average Points Allowed" = "avg_points_allowed",
+                                         "Point Differential" = "point_diff",
+                                         "Over Hit Rate" = "over_rate",
+                                         "Under Hit Rate" = "under_rate",
+                                         "Favorite Cover Rate (as favorite)" = "fav_cover_rate",
+                                         "Underdog Cover Rate (as underdog)" = "dog_cover_rate",
+                                         "Home Win Rate" = "home_win_rate",
+                                         "Away Win Rate" = "away_win_rate"
+                                       ),
+                                       selected = "avg_points_scored"),
+                           
+                           hr(),
+                           
+                           sliderInput("n_clusters", "Number of Clusters:",
+                                       min = 1, max = 4, value = 4, step = 1),
+                           
+                           hr(),
+                           
+                           h4("About Cluster Analysis:"),
+                           p("K-means clustering groups teams with similar characteristics together based on the 2 factors you select."),
+                           p("Teams in the same cluster share similar patterns across both metrics."),
+                           p(strong("Cluster Ordering:"), "Cluster 1 = highest and rightmost teams, with higher numbers moving left and down."),
+                           p("Use this to identify team archetypes (e.g., high-scoring teams, defensive teams, etc.)")
+                       )
+                ),
+                column(width = 8,
+                       box(width = NULL,
+                           h3("Team Clusters"),
+                           plotlyOutput("cluster_plot", height = "500px"),
+                           br(),
+                           h4("Cluster Characteristics"),
+                           tableOutput("cluster_summary_table"),
+                           br(),
+                           h4("Teams by Cluster"),
+                           tableOutput("cluster_teams_table")
+                       )
+                )
               )
       )
+      
     )
   )
 )

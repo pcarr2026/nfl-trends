@@ -675,4 +675,257 @@ function(input, output, session) {
     h2h
   })
   
+  # ========================================
+  # CLUSTER ANALYSIS TAB
+  # ========================================
+  
+  # Calculate team statistics for clustering
+  cluster_team_data <- reactive({
+    df <- nfl_data()
+    
+    # Calculate comprehensive team stats
+    team_stats <- df %>%
+      # Home games
+      group_by(team_home) %>%
+      summarise(
+        home_games = n(),
+        home_wins = sum(score_home > score_away),
+        home_points_scored = sum(score_home),
+        home_points_allowed = sum(score_away),
+        home_overs = sum(over_hit == "Over", na.rm = TRUE),
+        home_unders = sum(over_hit == "Under", na.rm = TRUE),
+        home_fav_games = sum(team_home == team_favorite_name, na.rm = TRUE),
+        home_fav_covers = sum(team_home == team_favorite_name & fav_correct == "Yes", na.rm = TRUE),
+        home_dog_games = sum(team_home != team_favorite_name, na.rm = TRUE),
+        home_dog_covers = sum(team_home != team_favorite_name & fav_correct == "No", na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      rename(team = team_home)
+    
+    # Away games
+    away_stats <- df %>%
+      group_by(team_away) %>%
+      summarise(
+        away_games = n(),
+        away_wins = sum(score_away > score_home),
+        away_points_scored = sum(score_away),
+        away_points_allowed = sum(score_home),
+        away_overs = sum(over_hit == "Over", na.rm = TRUE),
+        away_unders = sum(over_hit == "Under", na.rm = TRUE),
+        away_fav_games = sum(team_away == team_favorite_name, na.rm = TRUE),
+        away_fav_covers = sum(team_away == team_favorite_name & fav_correct == "Yes", na.rm = TRUE),
+        away_dog_games = sum(team_away != team_favorite_name, na.rm = TRUE),
+        away_dog_covers = sum(team_away != team_favorite_name & fav_correct == "No", na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      rename(team = team_away)
+    
+    # Combine home and away stats
+    combined_stats <- team_stats %>%
+      full_join(away_stats, by = "team") %>%
+      mutate(across(everything(), ~replace_na(.x, 0))) %>%
+      mutate(
+        total_games = home_games + away_games,
+        total_wins = home_wins + away_wins,
+        win_pct = round((total_wins / total_games) * 100, 1),
+        
+        total_points_scored = home_points_scored + away_points_scored,
+        total_points_allowed = home_points_allowed + away_points_allowed,
+        avg_points_scored = round(total_points_scored / total_games, 1),
+        avg_points_allowed = round(total_points_allowed / total_games, 1),
+        point_diff = round((total_points_scored - total_points_allowed) / total_games, 1),
+        
+        total_overs = home_overs + away_overs,
+        total_unders = home_unders + away_unders,
+        over_rate = round((total_overs / (total_overs + total_unders)) * 100, 1),
+        under_rate = round((total_unders / (total_overs + total_unders)) * 100, 1),
+        
+        total_fav_games = home_fav_games + away_fav_games,
+        total_fav_covers = home_fav_covers + away_fav_covers,
+        fav_cover_rate = ifelse(total_fav_games > 0, 
+                                round((total_fav_covers / total_fav_games) * 100, 1), 
+                                NA),
+        
+        total_dog_games = home_dog_games + away_dog_games,
+        total_dog_covers = home_dog_covers + away_dog_covers,
+        dog_cover_rate = ifelse(total_dog_games > 0,
+                                round((total_dog_covers / total_dog_games) * 100, 1),
+                                NA),
+        
+        home_win_rate = round((home_wins / home_games) * 100, 1),
+        away_win_rate = round((away_wins / away_games) * 100, 1)
+      ) %>%
+      filter(total_games >= 10)  # Only include teams with at least 10 games
+    
+    return(combined_stats)
+  })
+  
+  # Perform clustering with position-based ordering
+  cluster_results <- reactive({
+    req(input$cluster_factor1, input$cluster_factor2, input$n_clusters)
+    
+    team_data <- cluster_team_data()
+    
+    # Select the 2 factors chosen by user
+    factors <- c(input$cluster_factor1, input$cluster_factor2)
+    
+    # Check for duplicate factors
+    if(length(unique(factors)) != 2) {
+      return(NULL)
+    }
+    
+    # Create clustering dataset
+    cluster_data <- team_data %>%
+      select(team, all_of(factors))
+    
+    # Remove any rows with NA values in selected factors
+    cluster_data <- cluster_data %>%
+      filter(complete.cases(.))
+    
+    if(nrow(cluster_data) < input$n_clusters) {
+      return(NULL)
+    }
+    
+    # Store original values for plotting
+    cluster_data$x_axis <- cluster_data[[factors[1]]]
+    cluster_data$y_axis <- cluster_data[[factors[2]]]
+    
+    # Normalize the data (scale to mean=0, sd=1) for clustering
+    cluster_matrix <- cluster_data %>%
+      select(all_of(factors)) %>%
+      scale()
+    
+    # Perform k-means clustering
+    set.seed(123)
+    kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
+    
+    # Add cluster assignments
+    cluster_data$original_cluster <- kmeans_result$cluster
+    
+    # Calculate cluster centers in ORIGINAL (non-scaled) space
+    cluster_centers <- cluster_data %>%
+      group_by(original_cluster) %>%
+      summarise(
+        center_x = mean(x_axis),
+        center_y = mean(y_axis),
+        .groups = "drop"
+      ) %>%
+      # Order by position: highest Y first, then rightmost X
+      arrange(desc(center_y), desc(center_x)) %>%
+      mutate(new_cluster = row_number())
+    
+    # Map old cluster numbers to new ordered cluster numbers
+    cluster_data <- cluster_data %>%
+      left_join(cluster_centers %>% select(original_cluster, new_cluster), 
+                by = "original_cluster") %>%
+      mutate(cluster = as.factor(new_cluster)) %>%
+      select(-original_cluster, -new_cluster)
+    
+    return(list(
+      data = cluster_data,
+      kmeans = kmeans_result,
+      factors = factors,
+      centers = cluster_centers
+    ))
+  })
+  
+  # Cluster plot
+  output$cluster_plot <- renderPlotly({
+    results <- cluster_results()
+    
+    if(is.null(results)) {
+      return(plot_ly() %>% 
+               layout(title = "Please select 2 different factors or ensure enough data is available"))
+    }
+    
+    data <- results$data
+    factors <- results$factors
+    
+    # Create factor labels for axes
+    factor_labels <- c(
+      "win_pct" = "Win %",
+      "avg_points_scored" = "Avg Points Scored",
+      "avg_points_allowed" = "Avg Points Allowed",
+      "point_diff" = "Point Differential",
+      "over_rate" = "Over Hit %",
+      "under_rate" = "Under Hit %",
+      "fav_cover_rate" = "Favorite Cover %",
+      "dog_cover_rate" = "Underdog Cover %",
+      "home_win_rate" = "Home Win %",
+      "away_win_rate" = "Away Win %"
+    )
+    
+    x_label <- factor_labels[factors[1]]
+    y_label <- factor_labels[factors[2]]
+    
+    plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
+            type = 'scatter', mode = 'markers+text',
+            text = ~team,
+            textposition = 'top center',
+            marker = list(size = 12),
+            hovertext = ~paste0(
+              "<b>", team, "</b><br>",
+              "Cluster: ", cluster, "<br>",
+              x_label, ": ", x_axis, "<br>",
+              y_label, ": ", y_axis
+            ),
+            hoverinfo = 'text') %>%
+      layout(
+        title = paste("Team Clusters by", x_label, "vs", y_label),
+        xaxis = list(title = x_label),
+        yaxis = list(title = y_label),
+        showlegend = TRUE
+      )
+  })
+  
+  # Cluster summary table
+  output$cluster_summary_table <- renderTable({
+    results <- cluster_results()
+    
+    if(is.null(results)) {
+      return(data.frame(Message = "Please select 2 different factors"))
+    }
+    
+    data <- results$data
+    factors <- results$factors
+    
+    # Calculate average of each factor by cluster
+    summary <- data %>%
+      group_by(cluster) %>%
+      summarise(
+        Teams = n(),
+        across(all_of(factors), ~round(mean(.x, na.rm = TRUE), 1)),
+        .groups = "drop"
+      ) %>%
+      arrange(as.numeric(as.character(cluster)))
+    
+    # Rename cluster column
+    names(summary)[1] <- "Cluster"
+    
+    return(summary)
+  })
+  
+  # Teams by cluster table
+  output$cluster_teams_table <- renderTable({
+    results <- cluster_results()
+    
+    if(is.null(results)) {
+      return(data.frame(Message = "Please select 2 different factors"))
+    }
+    
+    data <- results$data
+    
+    # Create a table showing which teams are in each cluster
+    teams_by_cluster <- data %>%
+      arrange(as.numeric(as.character(cluster)), team) %>%
+      group_by(cluster) %>%
+      summarise(
+        Teams = paste(team, collapse = ", "),
+        .groups = "drop"
+      )
+    
+    names(teams_by_cluster)[1] <- "Cluster"
+    
+    return(teams_by_cluster)
+  })
 }
