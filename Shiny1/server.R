@@ -441,6 +441,7 @@ function(input, output, session) {
   })
   
   # Render the map
+  # Render the map
   output$map <- renderLeaflet({
     data <- stadium_data()
     
@@ -449,18 +450,28 @@ function(input, output, session) {
     }
     
     # Determine which metric to show
+    # Create gradient based on over percentage (0-100%)
+    # Color scheme: Red (0% overs) -> Yellow (50%) -> Green (100% overs)
+    data$over_pct_decimal <- data$over_pct / 100
+    
+    # Function to create color gradient
+    color_palette <- colorNumeric(
+      palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
+      domain = c(0, 100)
+    )
+    
+    data$circle_color <- color_palette(data$over_pct)
+    
+    # For display, still use the metric selection
     if (input$metric == "overs") {
       data$display_count <- data$overs
-      data$circle_color <- "green"
       metric_label <- "Overs"
     } else {
       data$display_count <- data$unders
-      data$circle_color <- "red"
       metric_label <- "Unders"
     }
     
-    # Create popup HTML with images
-    # Create popup HTML with images - UPDATED VERSION
+    # Create popup HTML with images - MOVED INSIDE renderLeaflet
     data$popup_html <- sapply(1:nrow(data), function(i) {
       # Only include image if URL exists and is valid
       image_tag <- if (!is.na(data$image_url[i]) && data$image_url[i] != "") {
@@ -506,12 +517,21 @@ function(input, output, session) {
         lng = ~longitude,
         lat = ~latitude,
         radius = ~sqrt(display_count) * 2,
-        color = ~circle_color,
-        fillOpacity = 0.6,
+        fillColor = ~circle_color,
+        color = "#ffffff",  # White border
+        weight = 2,
+        fillOpacity = 0.7,
         popup = ~popup_html,
-        label = ~paste0(stadium, ": ", display_count, " ", metric_label)
+        label = ~paste0(stadium, ": ", over_pct, "% Overs (", display_count, " ", metric_label, ")")
+      ) %>%
+      addLegend(
+        position = "bottomright",
+        pal = color_palette,
+        values = ~over_pct,
+        title = "Over %",
+        opacity = 0.7
       )
-  })
+  })  # <-- closes renderLeaflet
   
   # ========== NEW GAME PREDICTOR CODE ==========
   
@@ -1108,4 +1128,4 @@ function(input, output, session) {
     updateTabItems(session, "tabs", "analytics")
   })
   
-}
+}  # closes server function
