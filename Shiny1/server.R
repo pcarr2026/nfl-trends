@@ -93,10 +93,25 @@ function(input, output, session) {
                           colorscale = list(c(0, 'red'), c(0.5, 'yellow'), c(1, 'green')),
                           cmin = 0, cmax = 100)) %>%
       layout(
-        title = paste(gsub("_", " ", input$bet_type), "Hit Rate by", 
-                      gsub("_", " ", input$factor)),
-        xaxis = list(title = gsub("_", " ", input$factor)),
-        yaxis = list(title = "Hit Rate (%)", range = c(0, 100)),
+        title = paste("How Often", 
+                      ifelse(input$bet_type == "fav_correct", "Favorites Covered the Spread",
+                             ifelse(input$bet_type == "over_hit", "the Over Hit", "the Under Hit")),
+                      "by", 
+                      case_when(
+                        input$factor == "season_type" ~ "Week/Playoff Status",
+                        input$factor == "stadium_type" ~ "Stadium Type",
+                        input$factor == "temp_category" ~ "Temperature",
+                        input$factor == "team_home" ~ "Home Team",
+                        TRUE ~ gsub("_", " ", input$factor)
+                      )),
+        xaxis = list(title = case_when(
+          input$factor == "season_type" ~ "Week/Playoff Status",
+          input$factor == "stadium_type" ~ "Stadium Type",
+          input$factor == "temp_category" ~ "Temperature",
+          input$factor == "team_home" ~ "Home Team",
+          TRUE ~ gsub("_", " ", input$factor)
+        )),
+        yaxis = list(title = "Success Rate (%)", range = c(0, 100)),
         shapes = list(
           list(type = "line", x0 = -0.5, x1 = nrow(data) - 0.5, 
                y0 = 50, y1 = 50, 
@@ -337,6 +352,165 @@ function(input, output, session) {
     names(team_stats)[1] <- "Team"
     
     return(team_stats)
+  })
+  
+  # ========== STADIUM MAP CODE ==========
+  
+  # Stadium image URLs mapping
+  stadium_images <- reactive({
+    data.frame(
+      stadium = c("Arrowhead Stadium", "AT&T Stadium", "Lambeau Field", "Gillette Stadium",
+                  "Levi's Stadium", "MetLife Stadium", "Mercedes-Benz Stadium", "Soldier Field",
+                  "State Farm Stadium", "U.S. Bank Stadium", "Lincoln Financial Field",
+                  "M&T Bank Stadium", "Empower Field at Mile High", "Lucas Oil Stadium",
+                  "NRG Stadium", "Bank of America Stadium", "Raymond James Stadium",
+                  "Acrisure Stadium", "Paul Brown Stadium", "Nissan Stadium",
+                  "Ford Field", "Caesars Superdome", "SoFi Stadium", "Highmark Stadium",
+                  "Hard Rock Stadium", "Allegiant Stadium", "Lumen Field"),
+      image_url = c(
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Arrowhead_Stadium_panorama.jpg/300px-Arrowhead_Stadium_panorama.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Cowboys_Stadium_full_view.jpg/300px-Cowboys_Stadium_full_view.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Lambeau_field.jpg/300px-Lambeau_field.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Gillette_Stadium02.jpg/300px-Gillette_Stadium02.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Levi%27s_Stadium_exterior.jpg/300px-Levi%27s_Stadium_exterior.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Metlife_Stadium.jpg/300px-Metlife_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Mercedes-Benz_Stadium_from_Centennial_Olympic_Park.jpg/300px-Mercedes-Benz_Stadium_from_Centennial_Olympic_Park.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Soldier_Field.jpg/300px-Soldier_Field.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/State_Farm_Stadium_2022.jpg/300px-State_Farm_Stadium_2022.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/U.S._Bank_Stadium_-_West_Facade.jpg/300px-U.S._Bank_Stadium_-_West_Facade.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Lincoln_Financial_Field.jpg/300px-Lincoln_Financial_Field.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/M%26T_Bank_Stadium.jpg/300px-M%26T_Bank_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Empower_Field_at_Mile_High.jpg/300px-Empower_Field_at_Mile_High.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Lucas_Oil_Stadium.jpg/300px-Lucas_Oil_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/NRG_Stadium_outside.jpg/300px-NRG_Stadium_outside.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Bank_of_America_Stadium.jpg/300px-Bank_of_America_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Raymond_James_Stadium.jpg/300px-Raymond_James_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Heinz_Field.jpg/300px-Heinz_Field.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Paul_Brown_Stadium.jpg/300px-Paul_Brown_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Nissan_Stadium.jpg/300px-Nissan_Stadium.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Ford_Field.jpg/300px-Ford_Field.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Superdome_2014.jpg/300px-Superdome_2014.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/SoFi_Stadium_exterior.jpg/300px-SoFi_Stadium_exterior.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Highmark_Stadium_2021.jpg/300px-Highmark_Stadium_2021.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Hard_Rock_Stadium_2019.jpg/300px-Hard_Rock_Stadium_2019.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Allegiant_Stadium_outside.jpg/300px-Allegiant_Stadium_outside.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Lumen_Field.jpg/300px-Lumen_Field.jpg"
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  # Load stadium coordinates
+  stadium_coords <- reactive({
+    read.csv("../nfl_stadiums_coordinates.csv", stringsAsFactors = FALSE)
+  })
+  
+  # Aggregate stadium data
+  stadium_data <- reactive({
+    df <- nfl_data()
+    coords <- stadium_coords()
+    
+    # Calculate stats by stadium
+    stadium_stats <- df %>%
+      group_by(stadium) %>%
+      summarise(
+        total_games = n(),
+        overs = sum(over_hit == "Over", na.rm = TRUE),
+        unders = sum(over_hit == "Under", na.rm = TRUE),
+        over_pct = round((overs / total_games) * 100, 1),
+        .groups = "drop"
+      )
+    
+    # Join with coordinates
+    stadium_stats <- stadium_stats %>%
+      left_join(coords, by = "stadium") %>%
+      filter(!is.na(latitude) & !is.na(longitude))
+    
+    # Join with stadium images
+    stadium_stats <- stadium_stats %>%
+      left_join(stadium_images(), by = "stadium")
+    
+    return(stadium_stats)
+  })
+  
+  # Populate stadium dropdown
+  observe({
+    stadiums <- stadium_data()$stadium
+    updateSelectInput(session, "stadium_select",
+                      choices = c("All Stadiums" = "all", setNames(stadiums, stadiums)))
+  })
+  
+  # Render the map
+  output$map <- renderLeaflet({
+    data <- stadium_data()
+    
+    if (nrow(data) == 0) {
+      return(leaflet() %>% addTiles() %>% setView(lng = -98, lat = 39, zoom = 4))
+    }
+    
+    # Determine which metric to show
+    if (input$metric == "overs") {
+      data$display_count <- data$overs
+      data$circle_color <- "green"
+      metric_label <- "Overs"
+    } else {
+      data$display_count <- data$unders
+      data$circle_color <- "red"
+      metric_label <- "Unders"
+    }
+    
+    # Create popup HTML with images
+    # Create popup HTML with images - UPDATED VERSION
+    data$popup_html <- sapply(1:nrow(data), function(i) {
+      # Only include image if URL exists and is valid
+      image_tag <- if (!is.na(data$image_url[i]) && data$image_url[i] != "") {
+        paste0(
+          "<img src='", data$image_url[i], "' ",
+          "width='250px' ",
+          "style='border-radius: 5px; margin-bottom: 10px; display: block;' ",
+          "onerror=\"this.style.display='none'\" ",  # Hide if image fails to load
+          "loading='lazy'><br>"  # Lazy load images
+        )
+      } else {
+        ""
+      }
+      
+      paste0(
+        "<div style='text-align: center; min-width: 200px;'>",
+        image_tag,
+        "<h4 style='margin: 5px 0;'>", data$stadium[i], "</h4>",
+        "<b>Total Games:</b> ", data$total_games[i], "<br>",
+        "<b>Overs:</b> ", data$overs[i], " (", data$over_pct[i], "%)<br>",
+        "<b>Unders:</b> ", data$unders[i], " (", round(100 - data$over_pct[i], 1), "%)<br>",
+        "</div>"
+      )
+    })
+    
+    # Filter if specific stadium selected
+    if (input$stadium_select != "all") {
+      data <- data %>% filter(stadium == input$stadium_select)
+      zoom_level <- 12
+      center_lat <- data$latitude[1]
+      center_lon <- data$longitude[1]
+    } else {
+      zoom_level <- 4
+      center_lat <- 39
+      center_lon <- -98
+    }
+    
+    # Create map
+    leaflet(data) %>%
+      addTiles() %>%
+      setView(lng = center_lon, lat = center_lat, zoom = zoom_level) %>%
+      addCircleMarkers(
+        lng = ~longitude,
+        lat = ~latitude,
+        radius = ~sqrt(display_count) * 2,
+        color = ~circle_color,
+        fillOpacity = 0.6,
+        popup = ~popup_html,
+        label = ~paste0(stadium, ": ", display_count, " ", metric_label)
+      )
   })
   
   # ========== NEW GAME PREDICTOR CODE ==========
@@ -928,4 +1102,10 @@ function(input, output, session) {
     
     return(teams_by_cluster)
   })
+  
+  # Navigate to stadium map when button clicked
+  observeEvent(input$go_to_map, {
+    updateTabItems(session, "tabs", "analytics")
+  })
+  
 }
