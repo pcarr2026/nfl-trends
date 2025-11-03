@@ -497,25 +497,32 @@ function(input, output, session) {
     }
     
     # Determine which metric to show
-    # Create gradient based on over percentage (0-100%)
-    # Color scheme: Red (0% overs) -> Yellow (50%) -> Green (100% overs)
-    data$over_pct_decimal <- data$over_pct / 100
-    
-    # Function to create color gradient
-    color_palette <- colorNumeric(
-      palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
-      domain = c(0, 100)
-    )
-    
-    data$circle_color <- color_palette(data$over_pct)
-    
-    # For display, still use the metric selection
+    # Determine which metric to show and create gradient based on counts
     if (input$metric == "overs") {
       data$display_count <- data$overs
       metric_label <- "Overs"
+      
+      # Gradient based on number of overs relative to all stadiums
+      color_palette <- colorNumeric(
+        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
+        domain = c(min(data$overs), max(data$overs))
+      )
+      data$circle_color <- color_palette(data$overs)
+      legend_title <- "# of Overs"
+      legend_values <- data$overs
+      
     } else {
       data$display_count <- data$unders
       metric_label <- "Unders"
+      
+      # Gradient based on number of unders relative to all stadiums
+      color_palette <- colorNumeric(
+        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
+        domain = c(min(data$unders), max(data$unders))
+      )
+      data$circle_color <- color_palette(data$unders)
+      legend_title <- "# of Unders"
+      legend_values <- data$unders
     }
     
     # Create popup HTML with images
@@ -574,8 +581,8 @@ function(input, output, session) {
       addLegend(
         position = "bottomright",
         pal = color_palette,
-        values = ~over_pct,
-        title = "Over %",
+        values = ~legend_values,
+        title = legend_title,
         opacity = 0.7
       )
   })
