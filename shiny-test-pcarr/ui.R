@@ -5,6 +5,7 @@ library(leaflet)
 library(dplyr)
 library(tidyverse)
 library(plotly)
+library(htmltools)
 
 ui <- dashboardPage(
   skin = "blue",
@@ -172,6 +173,7 @@ ui <- dashboardPage(
           border: none !important;
           text-transform: uppercase;
           font-size: 13px !important;
+          color: white !important;
         }
         
         .btn-primary {
@@ -183,6 +185,7 @@ ui <- dashboardPage(
           background: linear-gradient(135deg, #D50A0A 0%, #ff1a1a 100%) !important;
           box-shadow: 0 6px 25px rgba(213, 10, 10, 0.4) !important;
           transform: translateY(-2px);
+          color: white !important;
         }
         
         .btn-lg {
@@ -195,6 +198,7 @@ ui <- dashboardPage(
           background: linear-gradient(135deg, #D50A0A 0%, #ff1a1a 100%) !important;
           box-shadow: 0 6px 25px rgba(213, 10, 10, 0.3) !important;
           animation: pulse 2s infinite;
+          color: white !important;
         }
         
         @keyframes pulse {
@@ -497,7 +501,10 @@ ui <- dashboardPage(
                            title = "Analysis Results",
                            plotlyOutput("plot", height = "500px"),
                            br(),
-                           tableOutput("table")
+                           tableOutput("table"),
+                           br(),
+                           downloadButton("download_betting_data", "Export Table to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )
@@ -581,7 +588,10 @@ ui <- dashboardPage(
                            br(),
                            
                            h4("Team Performance for This Strategy"),
-                           tableOutput("roi_team_table")
+                           tableOutput("roi_team_table"),
+                           br(),
+                           downloadButton("download_roi_data", "Export ROI Data to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )
@@ -763,7 +773,10 @@ ui <- dashboardPage(
                            tableOutput("cluster_summary_table"),
                            br(),
                            h4("Teams by Cluster"),
-                           tableOutput("cluster_teams_table")
+                           tableOutput("cluster_teams_table"),
+                           br(),
+                           downloadButton("download_cluster_data", "Export Cluster Data to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )
