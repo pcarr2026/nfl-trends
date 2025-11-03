@@ -5,6 +5,7 @@ library(leaflet)
 library(dplyr)
 library(tidyverse)
 library(plotly)
+library(htmltools)
 
 ui <- dashboardPage(
   skin = "blue",
@@ -172,6 +173,7 @@ ui <- dashboardPage(
           border: none !important;
           text-transform: uppercase;
           font-size: 13px !important;
+          color: white !important;
         }
         
         .btn-primary {
@@ -497,7 +499,10 @@ ui <- dashboardPage(
                            title = "Analysis Results",
                            plotlyOutput("plot", height = "500px"),
                            br(),
-                           tableOutput("table")
+                           tableOutput("table"),
+                           br(),
+                           downloadButton("download_betting_data", "Export Table to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )
@@ -581,7 +586,10 @@ ui <- dashboardPage(
                            br(),
                            
                            h4("Team Performance for This Strategy"),
-                           tableOutput("roi_team_table")
+                           tableOutput("roi_team_table"),
+                           br(),
+                           downloadButton("download_roi_data", "Export ROI Data to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )
@@ -763,7 +771,10 @@ ui <- dashboardPage(
                            tableOutput("cluster_summary_table"),
                            br(),
                            h4("Teams by Cluster"),
-                           tableOutput("cluster_teams_table")
+                           tableOutput("cluster_teams_table"),
+                           br(),
+                           downloadButton("download_cluster_data", "Export Cluster Data to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
                        )
                 )
               )

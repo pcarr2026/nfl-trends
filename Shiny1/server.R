@@ -1,6 +1,54 @@
 function(input, output, session) {
   
   # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
+  # Team logo URLs
+  team_logos <- reactive({
+    data.frame(
+      team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+               "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+               "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+               "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+               "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+               "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+               "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+               "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+      logo_url = c(
+        "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/car.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/no.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png",
+        "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png"
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
   
   nfl_data <- reactive({
     df <- read.csv("../cleaned_nfl_data.csv")
@@ -441,7 +489,6 @@ function(input, output, session) {
   })
   
   # Render the map
-  # Render the map
   output$map <- renderLeaflet({
     data <- stadium_data()
     
@@ -471,7 +518,7 @@ function(input, output, session) {
       metric_label <- "Unders"
     }
     
-    # Create popup HTML with images - MOVED INSIDE renderLeaflet
+    # Create popup HTML with images
     data$popup_html <- sapply(1:nrow(data), function(i) {
       # Only include image if URL exists and is valid
       image_tag <- if (!is.na(data$image_url[i]) && data$image_url[i] != "") {
@@ -531,7 +578,7 @@ function(input, output, session) {
         title = "Over %",
         opacity = 0.7
       )
-  })  # <-- closes renderLeaflet
+  })
   
   # ========== NEW GAME PREDICTOR CODE ==========
   
@@ -669,6 +716,14 @@ function(input, output, session) {
   # Display prediction result
   output$prediction_result <- renderUI({
     result <- prediction_result()
+    logos <- team_logos()
+    
+    # Get logo URLs
+    home_logo <- logos$logo_url[logos$team == input$pred_home_team]
+    away_logo <- logos$logo_url[logos$team == input$pred_away_team]
+    
+    if(length(home_logo) == 0) home_logo <- ""
+    if(length(away_logo) == 0) away_logo <- ""
     
     prob_home <- result$prob_home * 100
     prob_away <- result$prob_away * 100
@@ -676,7 +731,6 @@ function(input, output, session) {
     home_color <- ifelse(prob_home > 50, "#28a745", "#dc3545")
     away_color <- ifelse(prob_away > 50, "#28a745", "#dc3545")
     
-    # Determine confidence level
     confidence_diff <- abs(prob_home - 50)
     confidence_level <- ifelse(confidence_diff > 30, "Very High",
                                ifelse(confidence_diff > 20, "High",
@@ -688,6 +742,7 @@ function(input, output, session) {
       fluidRow(
         column(6,
                div(style = paste0("background-color: ", home_color, "; color: white; padding: 30px; border-radius: 10px; text-align: center;"),
+                   img(src = home_logo, width = "80px", style = "margin-bottom: 10px;"),
                    h3(input$pred_home_team),
                    p(paste0("(", result$home_record, ")"), style = "font-size: 14px; margin: 0;"),
                    h1(paste0(round(prob_home, 1), "%")),
@@ -696,6 +751,7 @@ function(input, output, session) {
         ),
         column(6,
                div(style = paste0("background-color: ", away_color, "; color: white; padding: 30px; border-radius: 10px; text-align: center;"),
+                   img(src = away_logo, width = "80px", style = "margin-bottom: 10px;"),
                    h3(input$pred_away_team),
                    p(paste0("(", result$away_record, ")"), style = "font-size: 14px; margin: 0;"),
                    h1(paste0(round(prob_away, 1), "%")),
@@ -1128,4 +1184,37 @@ function(input, output, session) {
     updateTabItems(session, "tabs", "analytics")
   })
   
-}  # closes server function
+  # Download handlers for CSV exports
+  output$download_betting_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_betting_analysis_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv(analysis_data(), file, row.names = FALSE)
+    }
+  )
+  
+  output$download_roi_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_roi_results_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      data <- roi_results() %>%
+        select(schedule_season, schedule_week, team_home, team_away, 
+               bet_won, profit, cumulative_profit)
+      write.csv(data, file, row.names = FALSE)
+    }
+  )
+  
+  output$download_cluster_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_cluster_analysis_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      results <- cluster_results()
+      if(!is.null(results)) {
+        write.csv(results$data, file, row.names = FALSE)
+      }
+    }
+  )
+}
