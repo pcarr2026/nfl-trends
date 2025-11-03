@@ -570,7 +570,7 @@ function(input, output, session) {
       addCircleMarkers(
         lng = ~longitude,
         lat = ~latitude,
-        radius = ~sqrt(display_count) * 2,
+        radius = ~sqrt(display_count) * 3 +5 ,
         fillColor = ~circle_color,
         color = "#ffffff",  # White border
         weight = 2,
