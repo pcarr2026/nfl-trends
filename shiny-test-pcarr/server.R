@@ -93,10 +93,25 @@ function(input, output, session) {
                           colorscale = list(c(0, 'red'), c(0.5, 'yellow'), c(1, 'green')),
                           cmin = 0, cmax = 100)) %>%
       layout(
-        title = paste(gsub("_", " ", input$bet_type), "Hit Rate by", 
-                      gsub("_", " ", input$factor)),
-        xaxis = list(title = gsub("_", " ", input$factor)),
-        yaxis = list(title = "Hit Rate (%)", range = c(0, 100)),
+        title = paste("How Often", 
+                      ifelse(input$bet_type == "fav_correct", "Favorites Covered the Spread",
+                             ifelse(input$bet_type == "over_hit", "the Over Hit", "the Under Hit")),
+                      "by", 
+                      case_when(
+                        input$factor == "season_type" ~ "Week/Playoff Status",
+                        input$factor == "stadium_type" ~ "Stadium Type",
+                        input$factor == "temp_category" ~ "Temperature",
+                        input$factor == "team_home" ~ "Home Team",
+                        TRUE ~ gsub("_", " ", input$factor)
+                      )),
+        xaxis = list(title = case_when(
+          input$factor == "season_type" ~ "Week/Playoff Status",
+          input$factor == "stadium_type" ~ "Stadium Type",
+          input$factor == "temp_category" ~ "Temperature",
+          input$factor == "team_home" ~ "Home Team",
+          TRUE ~ gsub("_", " ", input$factor)
+        )),
+        yaxis = list(title = "Success Rate (%)", range = c(0, 100)),
         shapes = list(
           list(type = "line", x0 = -0.5, x1 = nrow(data) - 0.5, 
                y0 = 50, y1 = 50, 
@@ -1086,6 +1101,11 @@ function(input, output, session) {
     names(teams_by_cluster)[1] <- "Cluster"
     
     return(teams_by_cluster)
+  })
+  
+  # Navigate to stadium map when button clicked
+  observeEvent(input$go_to_map, {
+    updateTabItems(session, "tabs", "analytics")
   })
   
 }
