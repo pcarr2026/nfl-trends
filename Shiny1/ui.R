@@ -603,7 +603,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = "Game Setup",
+                           title = tags$span(style = "color: white;", "Game Setup"),
                            
                            h4(icon("home"), " Home Team"),
                            selectInput("pred_home_team", NULL, choices = NULL),
@@ -654,7 +654,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = "Prediction Results",
+                           title = tags$span(style = "color: white;", "Prediction Results"),
                            
                            uiOutput("prediction_result"),
                            
