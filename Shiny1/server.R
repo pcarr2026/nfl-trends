@@ -634,6 +634,7 @@ function(input, output, session) {
   })
   
   # Build Random Forest prediction model with new features
+  # Build Random Forest prediction model with new features
   prediction_model <- reactive({
     data <- nfl_data()
     
@@ -657,34 +658,41 @@ function(input, output, session) {
       mutate(
         home_won = (winner == team_home),
         is_indoor = (stadium_type == "Indoor"),
-        # For model training, use calculated win percentages
         home_strength = home_win_pct,
         away_strength = away_win_pct,
-        # Generate synthetic rankings that correlate with win percentage
-        # Better teams (higher win %) get better rankings (lower numbers)
-        home_off_rank = pmax(1, pmin(32, round(33 - (home_win_pct * 25) + rnorm(n(), 0, 5)))),
-        home_def_rank = pmax(1, pmin(32, round(33 - (home_win_pct * 20) + rnorm(n(), 0, 6)))),
-        away_off_rank = pmax(1, pmin(32, round(33 - (away_win_pct * 25) + rnorm(n(), 0, 5)))),
-        away_def_rank = pmax(1, pmin(32, round(33 - (away_win_pct * 20) + rnorm(n(), 0, 6)))),
-        # Add spread multiplier to make it more dominant (multiply by 3 to increase importance)
+        
+        # FIXED: Generate synthetic rankings and immediately convert to strength
+        home_off_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 25) + rnorm(n(), 0, 5)))),
+        home_def_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 20) + rnorm(n(), 0, 6)))),
+        away_off_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 25) + rnorm(n(), 0, 5)))),
+        away_def_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 20) + rnorm(n(), 0, 6)))),
+        
+        # Convert rankings to strength scores (higher = better)
+        home_off_strength = 33 - home_off_rank_raw,
+        home_def_strength = 33 - home_def_rank_raw,
+        away_off_strength = 33 - away_off_rank_raw,
+        away_def_strength = 33 - away_def_rank_raw,
+        
+        # Add spread multiplier
         spread_weighted = spread_favorite * 3
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
-    # Build Random Forest model with weighted spread and reduced home advantage
+    # Build Random Forest model with STRENGTH scores (not ranks)
     library(randomForest)
     model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
                             home_strength + away_strength + 
-                            home_off_rank + home_def_rank + away_off_rank + away_def_rank,
+                            home_off_strength + home_def_strength + 
+                            away_off_strength + away_def_strength,
                           data = training_data,
                           ntree = 500,
                           importance = TRUE,
-                          # Reduce tree depth to prevent overfitting on home field
                           maxnodes = 50)
     
     list(model = model, data = training_data)
   })
   
+  # Make prediction when button is clicked
   # Make prediction when button is clicked
   prediction_result <- eventReactive(input$predict_btn, {
     model_info <- prediction_model()
@@ -703,10 +711,12 @@ function(input, output, session) {
       schedule_week = input$pred_week,
       home_strength = home_win_pct,
       away_strength = away_win_pct,
-      home_off_rank = input$pred_home_off_rank,
-      home_def_rank = input$pred_home_def_rank,
-      away_off_rank = input$pred_away_off_rank,
-      away_def_rank = input$pred_away_def_rank
+      
+      # FIXED: Convert user input ranks to strength scores
+      home_off_strength = 33 - input$pred_home_off_rank,
+      home_def_strength = 33 - input$pred_home_def_rank,
+      away_off_strength = 33 - input$pred_away_off_rank,
+      away_def_strength = 33 - input$pred_away_def_rank
     )
     
     # Get probability from Random Forest
@@ -857,6 +867,7 @@ function(input, output, session) {
   
   # Model accuracy
   output$model_accuracy <- renderText({
+    req(input$predict_btn)
     model_info <- prediction_model()
     
     predictions <- predict(model_info$model, type = "response")
@@ -867,10 +878,12 @@ function(input, output, session) {
   })
   
   output$model_total_games <- renderText({
+    req(input$predict_btn)
     formatC(nrow(prediction_model()$data), format = "d", big.mark = ",")
   })
   
   output$model_home_rate <- renderText({
+    req(input$predict_btn)
     model_info <- prediction_model()
     home_rate <- mean(model_info$data$home_won, na.rm = TRUE) * 100
     paste0(round(home_rate, 1), "%")
@@ -878,11 +891,12 @@ function(input, output, session) {
   
   # Variable importance plot
   output$importance_plot <- renderPlotly({
+    req(input$predict_btn)
     model_info <- prediction_model()
     
     importance_df <- as.data.frame(importance(model_info$model))
     importance_df$Variable <- c("Spread (Weighted)", "Indoor", "Week", "Home Win %", "Away Win %",
-                                "Home Off Rank", "Home Def Rank", "Away Off Rank", "Away Def Rank")
+                                "Home Off Strength", "Home Def Strength", "Away Off Strength", "Away Def Strength")
     importance_df <- importance_df %>%
       arrange(desc(MeanDecreaseGini)) %>%
       mutate(Importance = MeanDecreaseGini) %>%
