@@ -637,8 +637,8 @@ ui <- dashboardPage(
                            
                            h4(icon("cog"), " Game Conditions"),
                            
-                           numericInput("pred_spread", "Spread (- = home favored):",
-                                        value = -6, min = -25, max = 25, step = 0.5),
+                           numericInput("pred_spread", "Spread (+ = away favored, - = home favored):",
+                                        value = 3, min = -25, max = 25, step = 0.5),
                            
                            selectInput("pred_stadium", "Stadium Type:",
                                        choices = c("Outdoor", "Indoor"),
