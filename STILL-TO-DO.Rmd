@@ -18,3 +18,9 @@ output: html_document
 7. betting library using shiny store plus
 
 8. change statidum mapping from green-red (color blind people cant see)
+
+9. Put CSS into its own css file, include CSS funtion from shiny instead.
+
+10. and update ReadMe
+
+11. Rename shiny1 to real shiny
