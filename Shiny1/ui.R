@@ -450,7 +450,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = "Map Controls",
+                           title = tags$span(style = "color: white;", "Map Controls"),
                            radioButtons("metric", "Select Metric:",
                                         choices = c("Overs" = "overs", "Unders" = "unders"),
                                         selected = "overs"),
@@ -466,7 +466,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = "Interactive Stadium Map",
+                           title = tags$span(style = "color: white;", "Interactive Stadium Map"),
                            leafletOutput("map", height = "600px")
                        )
                 )
@@ -481,7 +481,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = "Analysis Controls",
+                           title = tags$span(style = "color: white;", "Analysis Controls"),
                            selectInput("bet_type", "What to Analyze:",
                                        choices = list("Favorite Covered" = "fav_correct",
                                                       "Over Hit" = "over_hit",
@@ -501,7 +501,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = "Analysis Results",
+                           title = tags$span(style = "color: white;", "Analysis Results"),
                            plotlyOutput("plot", height = "500px"),
                            br(),
                            tableOutput("table"),
@@ -521,7 +521,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = "Strategy Configuration",
+                           title = tags$span(style = "color: white;", "Strategy Configuration"),
                            
                            selectInput("roi_strategy", "Select Strategy:",
                                        choices = list(
@@ -555,7 +555,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = "Strategy Results",
+                           title = tags$span(style = "color: white;", "Strategy Results"),
                            
                            fluidRow(
                              column(3, 
@@ -722,7 +722,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = "Clustering Configuration",
+                           title = tags$span(style = "color: white;", "Clustering Configuration"),
                            
                            selectInput("cluster_factor1", "Factor 1 (X-Axis):",
                                        choices = list(
@@ -769,7 +769,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = "Team Clusters",
+                           title = tags$span(style = "color: white;", "Team Clusters"),
                            plotlyOutput("cluster_plot", height = "500px"),
                            br(),
                            h4("Cluster Characteristics"),
