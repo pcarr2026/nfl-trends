@@ -661,13 +661,15 @@ function(input, output, session) {
         home_strength = home_win_pct,
         away_strength = away_win_pct,
         
-        # FIXED: Generate synthetic rankings and immediately convert to strength
-        home_off_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 25) + rnorm(n(), 0, 5)))),
-        home_def_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 20) + rnorm(n(), 0, 6)))),
-        away_off_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 25) + rnorm(n(), 0, 5)))),
-        away_def_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 20) + rnorm(n(), 0, 6)))),
+        # Generate synthetic rankings where 1 = best, 32 = worst
+        # Better teams (higher win_pct) should get LOWER rank numbers
+        home_off_rank_raw = pmax(1, pmin(32, round(1 + ((1 - home_win_pct) * 31)))),
+        home_def_rank_raw = pmax(1, pmin(32, round(1 + ((1 - home_win_pct) * 31)))),
+        away_off_rank_raw = pmax(1, pmin(32, round(1 + ((1 - away_win_pct) * 31)))),
+        away_def_rank_raw = pmax(1, pmin(32, round(1 + ((1 - away_win_pct) * 31)))),
         
-        # Convert rankings to strength scores (higher = better)
+        # Convert rankings to strength scores for the model
+        # Lower rank (1) = higher strength (32), Higher rank (32) = lower strength (1)
         home_off_strength = 33 - home_off_rank_raw,
         home_def_strength = 33 - home_def_rank_raw,
         away_off_strength = 33 - away_off_rank_raw,
@@ -712,7 +714,9 @@ function(input, output, session) {
       home_strength = home_win_pct,
       away_strength = away_win_pct,
       
-      # FIXED: Convert user input ranks to strength scores
+      # Convert user input ranks to strength scores
+      # User inputs rank 1-32 where 1 = best
+      # Strength score: lower rank = higher strength (33 - rank)
       home_off_strength = 33 - input$pred_home_off_rank,
       home_def_strength = 33 - input$pred_home_def_rank,
       away_off_strength = 33 - input$pred_away_off_rank,
