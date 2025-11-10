@@ -12,3 +12,9 @@ output: html_document
 4. Add explanation for betting metrics as well as all the graphs/pages
 
 5. Client Storage (see Patrick notes)
+
+6. Princliple Component Analysis package for cluster analysis
+
+7. betting library using shiny store plus
+
+8. change statidum mapping from green-red (color blind people cant see)
