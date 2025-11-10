@@ -1,4 +1,195 @@
 function(input, output, session) {
+    
+    # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
+    
+    # NFL Team Colors
+    team_colors <- reactive({
+      data.frame(
+        team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                 "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                 "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                 "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                 "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+        primary_color = c("#97233F", "#A71930", "#241773", "#00338D",
+                          "#0085CA", "#0B162A", "#FB4F14", "#311D00",
+                          "#041E42", "#FB4F14", "#0076B6", "#203731",
+                          "#03202F", "#002C5F", "#006778", "#E31837",
+                          "#000000", "#0080C6", "#003594", "#008E97",
+                          "#4F2683", "#002244", "#D3BC8D", "#0B2265",
+                          "#125740", "#004C54", "#FFB612", "#AA0000",
+                          "#002244", "#D50A0A", "#0C2340", "#773141"),
+        secondary_color = c("#FFB612", "#000000", "#9E7C0C", "#C60C30",
+                            "#101820", "#C83803", "#000000", "#FF3C00",
+                            "#869397", "#002244", "#B0B7BC", "#FFB612",
+                            "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
+                            "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
+                            "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
+                            "#000000", "#A5ACAF", "#000000", "#B3995D",
+                            "#69BE28", "#FF7900", "#418FDE", "#FFB612"),
+        stringsAsFactors = FALSE
+      )
+    })
+    
+    # Show team selection modal on startup
+    observe({
+      showModal(modalDialog(
+        title = tags$div(
+          style = "text-align: center;",
+          icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
+          h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
+        ),
+        tags$div(
+          style = "text-align: center; padding: 20px;",
+          h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
+          p("The dashboard will personalize to your team's colors!"),
+          selectInput("favorite_team_select", NULL,
+                      choices = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                                  "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                                  "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                                  "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                                  "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                                  "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                                  "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                                  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+                      selected = "Kansas City Chiefs",
+                      width = "100%")
+        ),
+        footer = tagList(
+          actionButton("skip_team", "Skip", class = "btn-default"),
+          actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
+                       icon = icon("check"))
+        ),
+        size = "m",
+        easyClose = FALSE
+      ))
+    })
+    
+    # Store favorite team
+    favorite_team <- reactiveVal(NULL)
+    
+    observeEvent(input$confirm_team, {
+      favorite_team(input$favorite_team_select)
+      removeModal()
+    })
+    
+    observeEvent(input$skip_team, {
+      favorite_team("Default")
+      removeModal()
+    })
+    
+    # Generate dynamic CSS based on favorite team
+    output$dynamic_css <- renderUI({
+      req(favorite_team())
+      
+      if(favorite_team() == "Default") {
+        return(NULL)
+      }
+      
+      colors <- team_colors()
+      team_color_data <- colors[colors$team == favorite_team(), ]
+      
+      if(nrow(team_color_data) == 0) {
+        return(NULL)
+      }
+      
+      primary <- team_color_data$primary_color
+      secondary <- team_color_data$secondary_color
+      
+      tags$style(HTML(paste0("
+      /* Header Colors */
+      .main-header .logo {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+      }
+      
+      .main-header .navbar {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+      }
+      
+      /* Sidebar Active Item */
+      .sidebar-menu > li.active > a {
+        background: linear-gradient(90deg, ", primary, "33 0%, transparent 100%) !important;
+        border-left-color: ", primary, " !important;
+      }
+      
+      /* Box Headers */
+      .box-header {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+      }
+      
+      .box.box-solid.box-primary > .box-header {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+      }
+      
+      /* Buttons */
+      .btn-primary {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+        box-shadow: 0 4px 15px ", primary, "66 !important;
+      }
+      
+      .btn-primary:hover {
+        background: linear-gradient(135deg, ", secondary, " 0%, ", primary, " 100%) !important;
+        box-shadow: 0 6px 25px ", secondary, "66 !important;
+      }
+      
+      /* Headers */
+      h2 {
+        color: ", primary, " !important;
+        border-bottom-color: ", secondary, " !important;
+      }
+      
+      h3, h4 {
+        color: ", primary, " !important;
+      }
+      
+      /* Metric Cards Accent */
+      .metric-card::before {
+        background: linear-gradient(90deg, ", primary, ", ", secondary, ") !important;
+      }
+      
+      .metric-card:hover {
+        border-color: ", secondary, " !important;
+      }
+      
+      .metric-card h2 {
+        color: ", primary, " !important;
+      }
+      
+      /* Home Container Accent */
+      .home-container::before {
+        background: linear-gradient(90deg, ", primary, ", ", secondary, ", ", primary, ") !important;
+      }
+      
+      .home-title {
+        color: ", primary, " !important;
+      }
+      
+      .home-subtitle {
+        color: ", secondary, " !important;
+      }
+      
+      /* Feature List Accent */
+      .feature-list {
+        border-left-color: ", secondary, " !important;
+      }
+      
+      .feature-list li::before {
+        color: ", secondary, " !important;
+      }
+      
+      /* Table Headers */
+      table thead {
+        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
+      }
+    ")))
+    })
+    
+    # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
+    # Team logo URLs
+   
+      # ... rest of your code
   
   # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
   # Team logo URLs
