@@ -390,12 +390,17 @@ ui <- dashboardPage(
         }
       "))
     ),
+      
+      # ADD THIS LINE - Dynamic CSS based on favorite team
+      uiOutput("dynamic_css"),
+      
+        # ... rest of your tabs
     
-    tabItems(
+      tabItems(
       # ----------------------------------------
       # HOME TAB - Enhanced Design
       # ----------------------------------------
-      tabItem(tabName = "home",
+        tabItem(tabName = "home",
               fluidRow(
                 column(width = 12,
                        tags$div(
