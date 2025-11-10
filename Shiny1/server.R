@@ -824,26 +824,37 @@ function(input, output, session) {
     }
   })
   
-  # Build Random Forest prediction model with new features
-  # Build Random Forest prediction model with new features
+  # Build Random Forest prediction model with real offensive/defensive stats
   prediction_model <- reactive({
     data <- nfl_data()
     
-    # Calculate team statistics for each game (using data UP TO that point)
+    # Calculate cumulative team statistics for each game (using data UP TO that point)
     training_data <- data %>%
       arrange(schedule_season, schedule_week) %>%
       group_by(team_home) %>%
       mutate(
         home_games_played = row_number() - 1,
         home_wins = cumsum(lag(winner == team_home, default = FALSE)),
-        home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5)
+        home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5),
+        
+        # Calculate cumulative points scored and allowed (offense/defense metrics)
+        home_total_scored = cumsum(lag(score_home, default = 0)),
+        home_total_allowed = cumsum(lag(score_away, default = 0)),
+        home_avg_scored = ifelse(home_games_played > 0, home_total_scored / home_games_played, 20),
+        home_avg_allowed = ifelse(home_games_played > 0, home_total_allowed / home_games_played, 20)
       ) %>%
       ungroup() %>%
       group_by(team_away) %>%
       mutate(
         away_games_played = row_number() - 1,
         away_wins = cumsum(lag(winner == team_away, default = FALSE)),
-        away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5)
+        away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5),
+        
+        # Calculate cumulative points scored and allowed (offense/defense metrics)
+        away_total_scored = cumsum(lag(score_away, default = 0)),
+        away_total_allowed = cumsum(lag(score_home, default = 0)),
+        away_avg_scored = ifelse(away_games_played > 0, away_total_scored / away_games_played, 20),
+        away_avg_allowed = ifelse(away_games_played > 0, away_total_allowed / away_games_played, 20)
       ) %>%
       ungroup() %>%
       mutate(
@@ -852,26 +863,18 @@ function(input, output, session) {
         home_strength = home_win_pct,
         away_strength = away_win_pct,
         
-        # Generate synthetic rankings where 1 = best, 32 = worst
-        # Better teams (higher win_pct) should get LOWER rank numbers
-        home_off_rank_raw = pmax(1, pmin(32, round(1 + ((1 - home_win_pct) * 31)))),
-        home_def_rank_raw = pmax(1, pmin(32, round(1 + ((1 - home_win_pct) * 31)))),
-        away_off_rank_raw = pmax(1, pmin(32, round(1 + ((1 - away_win_pct) * 31)))),
-        away_def_rank_raw = pmax(1, pmin(32, round(1 + ((1 - away_win_pct) * 31)))),
-        
-        # Convert rankings to strength scores for the model
-        # Lower rank (1) = higher strength (32), Higher rank (32) = lower strength (1)
-        home_off_strength = 33 - home_off_rank_raw,
-        home_def_strength = 33 - home_def_rank_raw,
-        away_off_strength = 33 - away_off_rank_raw,
-        away_def_strength = 33 - away_def_rank_raw,
+        # Use actual scoring metrics instead of synthetic rankings
+        home_off_strength = log(home_avg_scored + 1) * 10,     # Higher = better offense
+        home_def_strength = 75 - (log(home_avg_allowed+1) * 10),  # Higher = better defense (fewer points allowed)
+        away_off_strength = log(away_avg_scored+1) * 10,     # Higher = better offense
+        away_def_strength = 75 - (log(away_avg_allowed+1) * 10),  # Higher = better defense (fewer points allowed)
         
         # Add spread multiplier
-        spread_weighted = spread_favorite * 3
+        spread_weighted = spread_favorite * 4
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
-    # Build Random Forest model with STRENGTH scores (not ranks)
+    # Build Random Forest model with real offensive/defensive stats
     library(randomForest)
     model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
                             home_strength + away_strength + 
@@ -886,7 +889,6 @@ function(input, output, session) {
   })
   
   # Make prediction when button is clicked
-  # Make prediction when button is clicked
   prediction_result <- eventReactive(input$predict_btn, {
     model_info <- prediction_model()
     
@@ -897,21 +899,19 @@ function(input, output, session) {
     home_win_pct <- if(home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
     away_win_pct <- if(away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
     
-    # Create prediction data with user inputs
+    # Create prediction data with user inputs using REAL scoring stats
     new_data <- data.frame(
-      spread_weighted = input$pred_spread * 3,  # Apply same weighting as training
+      spread_weighted = input$pred_spread * 4,  # Apply same weighting as training
       is_indoor = (input$pred_stadium == "Indoor"),
       schedule_week = input$pred_week,
       home_strength = home_win_pct,
       away_strength = away_win_pct,
       
-      # Convert user input ranks to strength scores
-      # User inputs rank 1-32 where 1 = best
-      # Strength score: lower rank = higher strength (33 - rank)
-      home_off_strength = 33 - input$pred_home_off_rank,
-      home_def_strength = 33 - input$pred_home_def_rank,
-      away_off_strength = 33 - input$pred_away_off_rank,
-      away_def_strength = 33 - input$pred_away_def_rank
+      # Use actual average points scored/allowed from user input
+      home_off_strength = log(input$pred_home_avg_scored+1) * 10,           # Higher = better offense
+      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 10),     # Higher = better defense
+      away_off_strength = log(input$pred_away_avg_scored+1) * 10,           # Higher = better offense
+      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 10)      # Higher = better defense
     )
     
     # Get probability from Random Forest
@@ -1091,7 +1091,7 @@ function(input, output, session) {
     
     importance_df <- as.data.frame(importance(model_info$model))
     importance_df$Variable <- c("Spread (Weighted)", "Indoor", "Week", "Home Win %", "Away Win %",
-                                "Home Off Strength", "Home Def Strength", "Away Off Strength", "Away Def Strength")
+                                "Home Avg Scored", "Home Avg Allowed", "Away Avg Scored", "Away Avg Allowed")
     importance_df <- importance_df %>%
       arrange(desc(MeanDecreaseGini)) %>%
       mutate(Importance = MeanDecreaseGini) %>%

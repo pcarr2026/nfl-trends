@@ -619,8 +619,8 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_home_off_rank", "Off. Rank:", value = 10, min = 1, max = 32, step = 1)),
-                             column(6, numericInput("pred_home_def_rank", "Def. Rank:", value = 15, min = 1, max = 32, step = 1))
+                             column(6, numericInput("pred_home_avg_scored", "Avg Points Scored:", value = 24, min = 0, max = 100, step = 0.5)),
+                             column(6, numericInput("pred_home_avg_allowed", "Avg Points Allowed:", value = 22, min = 0, max = 100, step = 0.5))
                            ),
                            
                            hr(),
@@ -634,8 +634,8 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_away_off_rank", "Off. Rank:", value = 12, min = 1, max = 32, step = 1)),
-                             column(6, numericInput("pred_away_def_rank", "Def. Rank:", value = 18, min = 1, max = 32, step = 1))
+                             column(6, numericInput("pred_away_avg_scored", "Avg Points Scored:", value = 22, min = 0, max = 100, step = 0.5)),
+                             column(6, numericInput("pred_away_avg_allowed", "Avg Points Allowed:", value = 24, min = 0, max = 100, step = 0.5))
                            ),
                            
                            hr(),
