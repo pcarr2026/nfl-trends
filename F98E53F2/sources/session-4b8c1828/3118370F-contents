@@ -283,7 +283,7 @@ ui <- dashboardPage(
         }
         
         .feature-list li::before {
-          content: '';
+          content: '⚡';
           position: absolute;
           left: 0;
           color: #D50A0A;
@@ -390,17 +390,12 @@ ui <- dashboardPage(
         }
       "))
     ),
-      
-      # ADD THIS LINE - Dynamic CSS based on favorite team
-      uiOutput("dynamic_css"),
-      
-        # ... rest of your tabs
     
-      tabItems(
+    tabItems(
       # ----------------------------------------
       # HOME TAB - Enhanced Design
       # ----------------------------------------
-        tabItem(tabName = "home",
+      tabItem(tabName = "home",
               fluidRow(
                 column(width = 12,
                        tags$div(
@@ -450,7 +445,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Map Controls"),
+                           title = "Map Controls",
                            radioButtons("metric", "Select Metric:",
                                         choices = c("Overs" = "overs", "Unders" = "unders"),
                                         selected = "overs"),
@@ -466,7 +461,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Interactive Stadium Map"),
+                           title = "Interactive Stadium Map",
                            leafletOutput("map", height = "600px")
                        )
                 )
@@ -481,7 +476,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Analysis Controls"),
+                           title = "Analysis Controls",
                            selectInput("bet_type", "What to Analyze:",
                                        choices = list("Favorite Covered" = "fav_correct",
                                                       "Over Hit" = "over_hit",
@@ -501,7 +496,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Analysis Results"),
+                           title = "Analysis Results",
                            plotlyOutput("plot", height = "500px"),
                            br(),
                            tableOutput("table"),
@@ -521,7 +516,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Strategy Configuration"),
+                           title = "Strategy Configuration",
                            
                            selectInput("roi_strategy", "Select Strategy:",
                                        choices = list(
@@ -555,7 +550,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Strategy Results"),
+                           title = "Strategy Results",
                            
                            fluidRow(
                              column(3, 
@@ -619,8 +614,8 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_home_avg_scored", "Avg Points Scored:", value = 24, min = 0, max = 100, step = 0.5)),
-                             column(6, numericInput("pred_home_avg_allowed", "Avg Points Allowed:", value = 22, min = 0, max = 100, step = 0.5))
+                             column(6, numericInput("pred_home_off_rank", "Off. Rank:", value = 10, min = 1, max = 32, step = 1)),
+                             column(6, numericInput("pred_home_def_rank", "Def. Rank:", value = 15, min = 1, max = 32, step = 1))
                            ),
                            
                            hr(),
@@ -634,8 +629,8 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_away_avg_scored", "Avg Points Scored:", value = 22, min = 0, max = 100, step = 0.5)),
-                             column(6, numericInput("pred_away_avg_allowed", "Avg Points Allowed:", value = 24, min = 0, max = 100, step = 0.5))
+                             column(6, numericInput("pred_away_off_rank", "Off. Rank:", value = 12, min = 1, max = 32, step = 1)),
+                             column(6, numericInput("pred_away_def_rank", "Def. Rank:", value = 18, min = 1, max = 32, step = 1))
                            ),
                            
                            hr(),
@@ -722,7 +717,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Clustering Configuration"),
+                           title = "Clustering Configuration",
                            
                            selectInput("cluster_factor1", "Factor 1 (X-Axis):",
                                        choices = list(
@@ -769,7 +764,7 @@ ui <- dashboardPage(
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Team Clusters"),
+                           title = "Team Clusters",
                            plotlyOutput("cluster_plot", height = "500px"),
                            br(),
                            h4("Cluster Characteristics"),
