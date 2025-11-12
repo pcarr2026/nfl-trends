@@ -5,9 +5,8 @@ output: html_document
 
 1. Fix the spread function on game predictor (currently only works for negative numbers when the home team is favored)
 
-2. Remove lightning bolts on the front page 
 
-3. Add year filter for NFL stadium page, and fix the red-green gradient for colorblind
+
 
 4. Add explanation for betting metrics as well as all the graphs/pages
 
@@ -17,7 +16,7 @@ output: html_document
 
 7. betting library using shiny store plus
 
-8. change statidum mapping from green-red (color blind people cant see)
+
 
 9. Put CSS into its own css file, include CSS funtion from shiny instead.
 
