@@ -1507,4 +1507,333 @@ function(input, output, session) {
       }
     }
   )
+  # ========================================
+  # BETTING LIBRARY TAB
+  # ========================================
+  nfl_teams <- c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                 "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                 "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                 "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                 "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")
+  # Create reactive storage (data persists during session only)
+  betting_library <- reactiveValues(
+    bets = data.frame(
+      id = character(),
+      date = character(),
+      is_parlay = logical(),
+      num_legs = numeric(),
+      home_team = character(),
+      away_team = character(),
+      bet_type = character(),
+      wagered = numeric(),
+      won = numeric(),
+      lost = numeric(),
+      net = numeric(),
+      result = character(),
+      notes = character(),
+      stringsAsFactors = FALSE
+    )
+  )
+  
+  # Get all bets
+  all_bets <- reactive({
+    if(nrow(betting_library$bets) == 0) {
+      return(data.frame(
+        id = character(),
+        date = character(),
+        is_parlay = logical(),
+        num_legs = numeric(),
+        home_team = character(),
+        away_team = character(),
+        bet_type = character(),
+        wagered = numeric(),
+        won = numeric(),
+        lost = numeric(),
+        net = numeric(),
+        result = character(),
+        notes = character(),
+        stringsAsFactors = FALSE
+      ))
+    }
+    betting_library$bets %>% arrange(desc(date))
+  })
+  
+  # Add new bet
+  observeEvent(input$lib_add_bet, {
+    req(input$lib_amount_wagered)
+    
+    # Validation for single bets
+    if(!input$lib_is_parlay) {
+      req(input$lib_home_team, input$lib_away_team, input$lib_bet_type)
+      if(input$lib_home_team == "" || input$lib_away_team == "") {
+        showModal(modalDialog(
+          title = "Error",
+          "Please select both home and away teams.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+    } else {
+      # Validation for parlays
+      req(input$lib_num_legs, input$lib_parlay_details)
+      if(input$lib_parlay_details == "") {
+        showModal(modalDialog(
+          title = "Error",
+          "Please enter parlay details.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+    }
+    
+    if(input$lib_amount_won == 0 && input$lib_amount_lost == 0) {
+      showModal(modalDialog(
+        title = "Error",
+        "Please enter either Amount Won or Amount Lost (not both zero).",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    
+    net_result <- input$lib_amount_won - input$lib_amount_lost
+    result_status <- ifelse(net_result > 0, "Won", 
+                            ifelse(net_result < 0, "Lost", "Push"))
+    
+    bet_id <- paste0("bet_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1000:9999, 1))
+    
+    # Create bet based on type
+    if(!input$lib_is_parlay) {
+      # Single bet
+      new_bet <- data.frame(
+        id = bet_id,
+        date = as.character(Sys.Date()),
+        is_parlay = FALSE,
+        num_legs = 1,
+        home_team = input$lib_home_team,
+        away_team = input$lib_away_team,
+        bet_type = input$lib_bet_type,
+        wagered = input$lib_amount_wagered,
+        won = input$lib_amount_won,
+        lost = input$lib_amount_lost,
+        net = net_result,
+        result = result_status,
+        notes = input$lib_notes,
+        stringsAsFactors = FALSE
+      )
+    } else {
+      # Parlay bet
+      new_bet <- data.frame(
+        id = bet_id,
+        date = as.character(Sys.Date()),
+        is_parlay = TRUE,
+        num_legs = input$lib_num_legs,
+        home_team = "PARLAY",
+        away_team = "",
+        bet_type = paste0(input$lib_num_legs, "-Leg Parlay"),
+        wagered = input$lib_amount_wagered,
+        won = input$lib_amount_won,
+        lost = input$lib_amount_lost,
+        net = net_result,
+        result = result_status,
+        notes = paste0("Legs: ", input$lib_parlay_details, 
+                       ifelse(input$lib_notes != "", paste0(" | Notes: ", input$lib_notes), "")),
+        stringsAsFactors = FALSE
+      )
+    }
+    
+    betting_library$bets <- rbind(betting_library$bets, new_bet)
+    
+    # Clear form
+    updateCheckboxInput(session, "lib_is_parlay", value = FALSE)
+    updateSelectInput(session, "lib_home_team", selected = "")
+    updateSelectInput(session, "lib_away_team", selected = "")
+    updateNumericInput(session, "lib_amount_wagered", value = 100)
+    updateNumericInput(session, "lib_amount_won", value = 0)
+    updateNumericInput(session, "lib_amount_lost", value = 0)
+    updateTextAreaInput(session, "lib_notes", value = "")
+    updateTextAreaInput(session, "lib_parlay_details", value = "")
+    
+    showNotification("Bet added successfully!", type = "message")
+  })
+  # Clear all bets
+  observeEvent(input$lib_clear_all, {
+    showModal(modalDialog(
+      title = "Confirm Delete",
+      "Are you sure you want to delete ALL bets? This cannot be undone.",
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("lib_confirm_clear", "Yes, Delete All", class = "btn-danger")
+      )
+    ))
+  })
+  
+  observeEvent(input$lib_confirm_clear, {
+    betting_library$bets <- data.frame(
+      id = character(),
+      date = character(),
+      is.parlay = logical(),
+      num_legs = numeric(),
+      home_team = character(),
+      away_team = character(),
+      bet_type = character(),
+      wagered = numeric(),
+      won = numeric(),
+      lost = numeric(),
+      net = numeric(),
+      result = character(),
+      notes = character(),
+      stringsAsFactors = FALSE
+    )
+    removeModal()
+    showNotification("All bets cleared!", type = "warning")
+  })
+  
+  # Summary Cards
+  output$lib_total_bets <- renderText({
+    bets <- all_bets()
+    formatC(nrow(bets), format = "d", big.mark = ",")
+  })
+  
+  output$lib_total_wagered <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("$0")
+    total <- sum(bets$wagered, na.rm = TRUE)
+    paste0("$", formatC(total, format = "f", digits = 0, big.mark = ","))
+  })
+  
+  output$lib_net_profit <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("$0")
+    net <- sum(bets$net, na.rm = TRUE)
+    sign <- ifelse(net >= 0, "+", "")
+    paste0(sign, "$", formatC(net, format = "f", digits = 0, big.mark = ","))
+  })
+  
+  output$lib_win_rate <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("0%")
+    wins <- sum(bets$result == "Won", na.rm = TRUE)
+    paste0(round((wins / nrow(bets)) * 100, 1), "%")
+  })
+  
+  output$lib_streak <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("No bets")
+    
+    # Sort by date (most recent first)
+    bets <- bets %>% arrange(desc(date))
+    
+    # Calculate streak
+    current_streak <- 0
+    last_result <- bets$result[1]
+    
+    for(i in 1:nrow(bets)) {
+      if(bets$result[i] == last_result && last_result %in% c("Won", "Lost")) {
+        current_streak <- current_streak + 1
+      } else {
+        break
+      }
+    }
+    
+    if(current_streak == 0) return("No streak")
+    
+    streak_type <- ifelse(last_result == "Won", "W", "L")
+    paste0(current_streak, streak_type)
+  })
+  
+  output$lib_best_type <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("N/A")
+    
+    type_performance <- bets %>%
+      group_by(bet_type) %>%
+      summarise(
+        total_net = sum(net, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      arrange(desc(total_net))
+    
+    if(nrow(type_performance) == 0) return("N/A")
+    
+    type_performance$bet_type[1]
+  })
+  
+  output$lib_avg_bet <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("$0")
+    avg <- mean(bets$wagered, na.rm = TRUE)
+    paste0("$", formatC(avg, format = "f", digits = 0, big.mark = ","))
+  })
+  
+  output$lib_roi <- renderText({
+    bets <- all_bets()
+    if(nrow(bets) == 0) return("0%")
+    total_wagered <- sum(bets$wagered, na.rm = TRUE)
+    total_net <- sum(bets$net, na.rm = TRUE)
+    if(total_wagered == 0) return("0%")
+    roi <- (total_net / total_wagered) * 100
+    sign <- ifelse(roi >= 0, "+", "")
+    paste0(sign, round(roi, 1), "%")
+  })
+  
+  # Bets Table
+  # Bets Table
+  output$lib_bets_table <- DT::renderDataTable({
+    bets <- all_bets()
+    
+    if(nrow(bets) == 0) {
+      return(DT::datatable(
+        data.frame(Message = "No bets added yet. Add your first bet!"),
+        options = list(
+          dom = 't',
+          searching = FALSE,
+          ordering = FALSE,
+          paging = FALSE
+        ),
+        rownames = FALSE
+      ))
+    }
+    
+    # Format for display
+    display_bets <- bets %>%
+      select(date, is_parlay, home_team, away_team, bet_type, wagered, won, lost, net, result, notes) %>%
+      mutate(
+        type_display = ifelse(is_parlay, paste0("🎲 ", bet_type), bet_type),
+        wagered = paste0("$", formatC(wagered, format = "f", digits = 0, big.mark = ","))
+      )
+    
+    names(display_bets) <- c("Date", "Parlay?", "Home", "Away", "Type", "Wagered", "Won", "Lost", "Net", "Result", "Notes")
+    
+    DT::datatable(
+      display_bets,
+      options = list(
+        pageLength = 10,
+        dom = 'frtip',
+        scrollX = TRUE
+      ),
+      rownames = FALSE
+    )
+  })
+  
+  # Export CSV
+  output$lib_export_csv <- downloadHandler(
+    filename = function() {
+      paste0("my_betting_library_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      bets <- all_bets()
+      if(nrow(bets) > 0) {
+        export_data <- bets %>%
+          select(date, home_team, away_team, bet_type, wagered, won, lost, net, result, notes)
+        write.csv(export_data, file, row.names = FALSE)
+      }
+    }
+  )
 }
+
