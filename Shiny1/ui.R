@@ -475,8 +475,55 @@ ui <- dashboardPage(
                            leafletOutput("map", height = "600px")
                        )
                 )
-              )
-      ),
+              ),
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", icon("info-circle"), " How to Read the Stadium Map (Click to Expand)"),                           
+                           tags$div(style = "padding: 10px;",
+                                    
+                                    h4(icon("question-circle"), " What Are Overs and Unders?"),
+                                    p(strong("Over/Under Betting"), "is a wager on the total combined points scored by both teams in a game."),
+                                    tags$ul(
+                                      tags$li(strong("Over:"), "The bet wins if the total points scored ", 
+                                              tags$em("exceeds"), "the betting line set by oddsmakers."),
+                                      tags$li(strong("Under:"), "The bet wins if the total points scored ", 
+                                              tags$em("falls below"), "the betting line.")
+                                    ),
+                                    p(tags$strong("Example:"), "If the over/under line is 47.5 points, and the final score is 28-24 (52 total), the ", 
+                                      tags$span(style="color: #28a745; font-weight: bold;", "Over"), " wins."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("map-marker"), " How to Read This Map"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Multiple Circles:"), "Each circle represents one NFL stadium. The size of the circle is proportional to the ", 
+                                              tags$em("number"), " of Overs or Unders that hit at that venue."),
+                                      tags$li(tags$strong("Circle Colors:"), "The gradient (blue to red) shows the ", 
+                                              tags$em("count"), " of that outcome relative to other stadiums. Darker red = more Overs/Unders."),
+                                      tags$li(tags$strong("Click for Details:"), "Click any stadium marker to see the exact count, percentage, and a photo of the venue."),
+                                      tags$li(tags$strong("Percentage Matters:"), "A stadium with 60% Overs means that historically, games there tend to be ", 
+                                              tags$em("higher-scoring"), " than the betting line suggests.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("lightbulb"), " Why This Matters for Bettors"),
+                                    p("Certain stadiums consistently favor overs or unders due to factors like:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Weather:"), "Outdoor stadiums in cold/windy cities (Buffalo, Green Bay) often see lower scores"),
+                                      tags$li(tags$strong("Altitude:"), "Denver's thin air can lead to more scoring"),
+                                      tags$li(tags$strong("Dome Effect:"), "Indoor stadiums eliminate weather, creating consistent scoring environments"),
+                                      tags$li(tags$strong("Field Conditions:"), "Grass vs. turf affects offensive efficiency")
+                                    ),
+                                    p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
+                                      icon("chart-line"), " ", tags$strong("Pro Tip:"), 
+                                      " If a stadium shows 58%+ Overs over 200+ games, it's statistically significant. ",
+                                      "Bettors can use this trend when that stadium hosts future games.")
+                           )
+                       )
+                )
+              ),),
       
       # ----------------------------------------
       # BETTING ANALYSIS TAB
