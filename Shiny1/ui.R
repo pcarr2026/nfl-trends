@@ -479,10 +479,10 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 12,
                        box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
-                           title = tags$span(style = "color: white;", icon("info-circle"), " How to Read the Stadium Map (Click to Expand)"),                           
+                           title = tags$span(style = "color: white;"," How to Read the Stadium Map (Click to Expand)"),                           
                            tags$div(style = "padding: 10px;",
                                     
-                                    h4(icon("question-circle"), " What Are Overs and Unders?"),
+                                    h4(" What Are Overs and Unders?"),
                                     p(strong("Over/Under Betting"), "is a wager on the total combined points scored by both teams in a game."),
                                     tags$ul(
                                       tags$li(strong("Over:"), "The bet wins if the total points scored ", 
@@ -495,7 +495,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("map-marker"), " How to Read This Map"),
+                                    h4(" How to Read This Map"),
                                     tags$ul(
                                       tags$li(tags$strong("Multiple Circles:"), "Each circle represents one NFL stadium. The size of the circle is proportional to the ", 
                                               tags$em("number"), " of Overs or Unders that hit at that venue."),
@@ -508,7 +508,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("lightbulb"), " Why This Matters for Bettors"),
+                                    h4(" Why This Matters for Bettors"),
                                     p("Certain stadiums consistently favor overs or unders due to factors like:"),
                                     tags$ul(
                                       tags$li(tags$strong("Weather:"), "Outdoor stadiums in cold/windy cities (Buffalo, Green Bay) often see lower scores"),
@@ -525,6 +525,9 @@ ui <- dashboardPage(
                 )
               ),),
       
+      # ----------------------------------------
+      # BETTING ANALYSIS TAB
+      # ----------------------------------------
       # ----------------------------------------
       # BETTING ANALYSIS TAB
       # ----------------------------------------
@@ -560,6 +563,88 @@ ui <- dashboardPage(
                            br(),
                            downloadButton("download_betting_data", "Export Table to CSV", 
                                           class = "btn-primary", icon = icon("download"))
+                       )
+                )
+              ),
+              
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", "Understanding Betting Analysis (Click to Expand)"),                           
+                           tags$div(style = "padding: 10px;",
+                                    
+                                    h4(" What is Spread Betting?"),
+                                    p(strong("The Point Spread"), "is the predicted margin of victory set by oddsmakers. When you bet on the favorite, they must win by ", 
+                                      tags$em("more"), " than the spread. When you bet on the underdog, they must either win outright ", 
+                                      tags$em("or"), " lose by ", tags$em("less"), " than the spread."),
+                                    tags$ul(
+                                      tags$li(tags$strong("Favorite Covered:"), "The favored team won by more than the spread. If Kansas City was -7 and won 31-20 (11-point margin), the favorite covered."),
+                                      tags$li(tags$strong("Underdog Covered:"), "The underdog either won the game OR lost by less than the spread. If Buffalo was +7 and lost 27-24 (3-point margin), the underdog covered."),
+                                      tags$li(tags$strong("Push:"), "When the margin exactly equals the spread (e.g., -7 favorite wins by exactly 7), bets are refunded.")
+                                    ),
+                                    p(tags$strong("Example:"), "If the Patriots are favored by -3.5 over the Dolphins and win 24-17 (7-point margin), the Patriots ", 
+                                      tags$span(style="color: #28a745; font-weight: bold;", "covered"), " because 7 > 3.5."),
+                                    
+                                    hr(),
+                                    
+                                    h4(" What Does This Analysis Show?"),
+                                    p("This tool reveals ", tags$strong("situational betting patterns"), " by breaking down historical performance across different factors:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Season Type:"), "How do teams perform in Week 1 vs. mid-season vs. playoffs? Early season games often have more unpredictable outcomes."),
+                                      tags$li(tags$strong("Stadium Type:"), "Do indoor domes favor favorites more than outdoor stadiums? Weather-controlled environments reduce unpredictability."),
+                                      tags$li(tags$strong("Temperature:"), "Cold weather games often favor defenses and underdogs. Teams struggle to score in sub-freezing conditions."),
+                                      tags$li(tags$strong("Home Team:"), "Which teams consistently beat the spread when playing at home? Some franchises have strong home-field advantages.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(" Understanding the 50% Red Line"),
+                                    p("The ", tags$span(style="color: red; font-weight: bold;", "red dashed line at 50%"), " represents ", 
+                                      tags$strong("break-even performance"), ". Here's why it matters:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Above 50%:"), "If favorites cover 55% of the time in indoor stadiums, betting favorites in domes would be ", 
+                                              tags$span(style="color: #28a745;", "profitable"), " long-term (assuming standard -110 odds)."),
+                                      tags$li(tags$strong("Below 50%:"), "If favorites only cover 45% of the time in cold weather, betting favorites in those conditions would ", 
+                                              tags$span(style="color: #dc3545;", "lose money"), " over time."),
+                                      tags$li(tags$strong("At 50%:"), "This is exactly what oddsmakers expect. Due to the \"vig\" (betting commission), you need to win ", 
+                                              tags$em("52.4%"), " of bets at -110 odds to break even.")
+                                    ),
+                                    p(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369;",
+                                      icon("calculator"), " ", tags$strong("Math Behind It:"), 
+                                      " To profit at standard -110 odds (bet $110 to win $100), you need a 52.4% win rate. ",
+                                      "Any factor showing 54%+ success over 100+ games represents a potential edge."),
+                                    
+                                    hr(),
+                                    
+                                    h4(" How to Use the Filters"),
+                                    tags$ol(
+                                      tags$li(tags$strong("Select 'What to Analyze':"), 
+                                              tags$ul(
+                                                tags$li(tags$strong("Favorite Covered:"), "See when betting favorites pays off"),
+                                                tags$li(tags$strong("Over Hit:"), "Identify high-scoring situations"),
+                                                tags$li(tags$strong("Under Hit:"), "Find low-scoring patterns")
+                                              )),
+                                      tags$li(tags$strong("Choose a Factor:"), "Pick the variable you want to test (weather, week, team, etc.)"),
+                                      tags$li(tags$strong("Analyze the Results:"), "Look for bars significantly above or below 50%"),
+                                      tags$li(tags$strong("Check Sample Size:"), "Hover over bars to see game counts - patterns with 50+ games are more reliable")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(" Real-World Betting Applications"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Identify Situational Edges:"), "If Week 1 shows favorites only cover 42% of the time, consider betting underdogs in season openers."),
+                                      tags$li(tags$strong("Weather-Based Strategy:"), "If cold weather games go Under 58% of the time, target unders in December games in Buffalo/Green Bay."),
+                                      tags$li(tags$strong("Home Field Advantage:"), "Some teams (Seattle, Kansas City) consistently cover at home due to crowd noise and altitude/weather factors."),
+                                      tags$li(tags$strong("Playoff Trends:"), "Playoff games often trend differently than regular season - tighter defenses, lower scoring.")
+                                    ),
+                                    
+                                    p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
+                                      icon("exclamation-triangle"), " ", tags$strong("Important Disclaimer:"), 
+                                      " Past performance does not guarantee future results. Vegas oddsmakers adjust lines based on these same factors. ",
+                                      "Use this analysis as ", tags$em("one tool"), " in a broader betting strategy, not as a guaranteed prediction system. ",
+                                      "Always bet responsibly and within your means.")
+                           )
                        )
                 )
               )
