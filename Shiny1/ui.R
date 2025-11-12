@@ -283,7 +283,7 @@ ui <- dashboardPage(
         }
         
         .feature-list li::before {
-          content: '⚡';
+          content: '';
           position: absolute;
           left: 0;
           color: #D50A0A;
