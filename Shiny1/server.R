@@ -649,6 +649,10 @@ function(input, output, session) {
     df <- nfl_data()
     coords <- stadium_coords()
     
+    # Filter by year range
+    df <- df %>%
+      filter(schedule_season >= input$stadium_year_range[1],
+             schedule_season <= input$stadium_year_range[2])
     # Calculate stats by stadium
     stadium_stats <- df %>%
       group_by(stadium) %>%
@@ -695,7 +699,7 @@ function(input, output, session) {
       
       # Gradient based on number of overs relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
+        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
         domain = c(min(data$overs), max(data$overs))
       )
       data$circle_color <- color_palette(data$overs)
@@ -708,7 +712,7 @@ function(input, output, session) {
       
       # Gradient based on number of unders relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
+        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
         domain = c(min(data$unders), max(data$unders))
       )
       data$circle_color <- color_palette(data$unders)
