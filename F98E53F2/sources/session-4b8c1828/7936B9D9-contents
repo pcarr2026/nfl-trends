@@ -1,195 +1,4 @@
 function(input, output, session) {
-    
-    # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
-    
-    # NFL Team Colors
-    team_colors <- reactive({
-      data.frame(
-        team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                 "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                 "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                 "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                 "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-        primary_color = c("#97233F", "#A71930", "#241773", "#00338D",
-                          "#0085CA", "#0B162A", "#FB4F14", "#311D00",
-                          "#041E42", "#FB4F14", "#0076B6", "#203731",
-                          "#03202F", "#002C5F", "#006778", "#E31837",
-                          "#000000", "#0080C6", "#003594", "#008E97",
-                          "#4F2683", "#002244", "#D3BC8D", "#0B2265",
-                          "#125740", "#004C54", "#FFB612", "#AA0000",
-                          "#002244", "#D50A0A", "#0C2340", "#773141"),
-        secondary_color = c("#FFB612", "#000000", "#9E7C0C", "#C60C30",
-                            "#101820", "#C83803", "#000000", "#FF3C00",
-                            "#869397", "#002244", "#B0B7BC", "#FFB612",
-                            "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
-                            "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
-                            "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
-                            "#000000", "#A5ACAF", "#000000", "#B3995D",
-                            "#69BE28", "#FF7900", "#418FDE", "#FFB612"),
-        stringsAsFactors = FALSE
-      )
-    })
-    
-    # Show team selection modal on startup
-    observe({
-      showModal(modalDialog(
-        title = tags$div(
-          style = "text-align: center;",
-          icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
-          h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
-        ),
-        tags$div(
-          style = "text-align: center; padding: 20px;",
-          h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
-          p("The dashboard will personalize to your team's colors!"),
-          selectInput("favorite_team_select", NULL,
-                      choices = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                                  "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                                  "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                                  "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                                  "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                                  "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                                  "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                                  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-                      selected = "Kansas City Chiefs",
-                      width = "100%")
-        ),
-        footer = tagList(
-          actionButton("skip_team", "Skip", class = "btn-default"),
-          actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
-                       icon = icon("check"))
-        ),
-        size = "m",
-        easyClose = FALSE
-      ))
-    })
-    
-    # Store favorite team
-    favorite_team <- reactiveVal(NULL)
-    
-    observeEvent(input$confirm_team, {
-      favorite_team(input$favorite_team_select)
-      removeModal()
-    })
-    
-    observeEvent(input$skip_team, {
-      favorite_team("Default")
-      removeModal()
-    })
-    
-    # Generate dynamic CSS based on favorite team
-    output$dynamic_css <- renderUI({
-      req(favorite_team())
-      
-      if(favorite_team() == "Default") {
-        return(NULL)
-      }
-      
-      colors <- team_colors()
-      team_color_data <- colors[colors$team == favorite_team(), ]
-      
-      if(nrow(team_color_data) == 0) {
-        return(NULL)
-      }
-      
-      primary <- team_color_data$primary_color
-      secondary <- team_color_data$secondary_color
-      
-      tags$style(HTML(paste0("
-      /* Header Colors */
-      .main-header .logo {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-      }
-      
-      .main-header .navbar {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-      }
-      
-      /* Sidebar Active Item */
-      .sidebar-menu > li.active > a {
-        background: linear-gradient(90deg, ", primary, "33 0%, transparent 100%) !important;
-        border-left-color: ", primary, " !important;
-      }
-      
-      /* Box Headers */
-      .box-header {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-      }
-      
-      .box.box-solid.box-primary > .box-header {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-      }
-      
-      /* Buttons */
-      .btn-primary {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-        box-shadow: 0 4px 15px ", primary, "66 !important;
-      }
-      
-      .btn-primary:hover {
-        background: linear-gradient(135deg, ", secondary, " 0%, ", primary, " 100%) !important;
-        box-shadow: 0 6px 25px ", secondary, "66 !important;
-      }
-      
-      /* Headers */
-      h2 {
-        color: ", primary, " !important;
-        border-bottom-color: ", secondary, " !important;
-      }
-      
-      h3, h4 {
-        color: ", primary, " !important;
-      }
-      
-      /* Metric Cards Accent */
-      .metric-card::before {
-        background: linear-gradient(90deg, ", primary, ", ", secondary, ") !important;
-      }
-      
-      .metric-card:hover {
-        border-color: ", secondary, " !important;
-      }
-      
-      .metric-card h2 {
-        color: ", primary, " !important;
-      }
-      
-      /* Home Container Accent */
-      .home-container::before {
-        background: linear-gradient(90deg, ", primary, ", ", secondary, ", ", primary, ") !important;
-      }
-      
-      .home-title {
-        color: ", primary, " !important;
-      }
-      
-      .home-subtitle {
-        color: ", secondary, " !important;
-      }
-      
-      /* Feature List Accent */
-      .feature-list {
-        border-left-color: ", secondary, " !important;
-      }
-      
-      .feature-list li::before {
-        color: ", secondary, " !important;
-      }
-      
-      /* Table Headers */
-      table thead {
-        background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
-      }
-    ")))
-    })
-    
-    # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
-    # Team logo URLs
-   
-      # ... rest of your code
   
   # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
   # Team logo URLs
@@ -417,10 +226,6 @@ function(input, output, session) {
   # Calculate ROI results
   roi_results <- reactive({
     df <- nfl_data()
-    
-    df <- df %>%
-      filter(schedule_season >= input$roi_year_range[1] & 
-               schedule_season <= input$roi_year_range[2])
     
     # Determine which team we're betting on for each game
     df <- df %>%
@@ -653,10 +458,6 @@ function(input, output, session) {
     df <- nfl_data()
     coords <- stadium_coords()
     
-    # Filter by year range
-    df <- df %>%
-      filter(schedule_season >= input$stadium_year_range[1],
-             schedule_season <= input$stadium_year_range[2])
     # Calculate stats by stadium
     stadium_stats <- df %>%
       group_by(stadium) %>%
@@ -703,7 +504,7 @@ function(input, output, session) {
       
       # Gradient based on number of overs relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
+        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
         domain = c(min(data$overs), max(data$overs))
       )
       data$circle_color <- color_palette(data$overs)
@@ -716,7 +517,7 @@ function(input, output, session) {
       
       # Gradient based on number of unders relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
+        palette = c("#DC3545", "#FFC107", "#28A745"),  # Red -> Yellow -> Green
         domain = c(min(data$unders), max(data$unders))
       )
       data$circle_color <- color_palette(data$unders)
@@ -832,37 +633,26 @@ function(input, output, session) {
     }
   })
   
-  # Build Random Forest model with real offensive/defensive stats
+  # Build Random Forest prediction model with new features
+  # Build Random Forest prediction model with new features
   prediction_model <- reactive({
     data <- nfl_data()
     
-    # Calculate cumulative team statistics for each game (using data UP TO that point)
+    # Calculate team statistics for each game (using data UP TO that point)
     training_data <- data %>%
       arrange(schedule_season, schedule_week) %>%
       group_by(team_home) %>%
       mutate(
         home_games_played = row_number() - 1,
         home_wins = cumsum(lag(winner == team_home, default = FALSE)),
-        home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5),
-        
-        # Calculate cumulative points scored and allowed (offense/defense metrics)
-        home_total_scored = cumsum(lag(score_home, default = 0)),
-        home_total_allowed = cumsum(lag(score_away, default = 0)),
-        home_avg_scored = ifelse(home_games_played > 0, home_total_scored / home_games_played, 20),
-        home_avg_allowed = ifelse(home_games_played > 0, home_total_allowed / home_games_played, 20)
+        home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5)
       ) %>%
       ungroup() %>%
       group_by(team_away) %>%
       mutate(
         away_games_played = row_number() - 1,
         away_wins = cumsum(lag(winner == team_away, default = FALSE)),
-        away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5),
-        
-        # Calculate cumulative points scored and allowed (offense/defense metrics)
-        away_total_scored = cumsum(lag(score_away, default = 0)),
-        away_total_allowed = cumsum(lag(score_home, default = 0)),
-        away_avg_scored = ifelse(away_games_played > 0, away_total_scored / away_games_played, 20),
-        away_avg_allowed = ifelse(away_games_played > 0, away_total_allowed / away_games_played, 20)
+        away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5)
       ) %>%
       ungroup() %>%
       mutate(
@@ -871,25 +661,24 @@ function(input, output, session) {
         home_strength = home_win_pct,
         away_strength = away_win_pct,
         
-        # Use actual scoring metrics instead of synthetic rankings
-        home_off_strength = log(home_avg_scored + 1) * 5,     # Higher = better offense
-        home_def_strength = 75 - (log(home_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
-        away_off_strength = log(away_avg_scored+1) * 5,     # Higher = better offense
-        away_def_strength = 75 - (log(away_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
+        # FIXED: Generate synthetic rankings and immediately convert to strength
+        home_off_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 25) + rnorm(n(), 0, 5)))),
+        home_def_rank_raw = pmax(1, pmin(32, round(33 - (home_win_pct * 20) + rnorm(n(), 0, 6)))),
+        away_off_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 25) + rnorm(n(), 0, 5)))),
+        away_def_rank_raw = pmax(1, pmin(32, round(33 - (away_win_pct * 20) + rnorm(n(), 0, 6)))),
         
-        # CORRECTED: Encode spread from HOME TEAM perspective (negative = home favored)
-        # This ensures symmetry - the model learns "negative spread = team wins more often"
-        spread_weighted = case_when(
-          is.na(spread_favorite) ~ 0,
-          is.na(team_favorite_name) ~ 0,
-          team_home == team_favorite_name ~ -abs(spread_favorite) * 0.5,  # Home favored: negative
-          team_away == team_favorite_name ~ abs(spread_favorite) * 0.5,   # Away favored: positive
-          TRUE ~ 0
-        )
+        # Convert rankings to strength scores (higher = better)
+        home_off_strength = 33 - home_off_rank_raw,
+        home_def_strength = 33 - home_def_rank_raw,
+        away_off_strength = 33 - away_off_rank_raw,
+        away_def_strength = 33 - away_def_rank_raw,
+        
+        # Add spread multiplier
+        spread_weighted = spread_favorite * 3
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
-    # Build Random Forest model with real offensive/defensive stats
+    # Build Random Forest model with STRENGTH scores (not ranks)
     library(randomForest)
     model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
                             home_strength + away_strength + 
@@ -904,6 +693,7 @@ function(input, output, session) {
   })
   
   # Make prediction when button is clicked
+  # Make prediction when button is clicked
   prediction_result <- eventReactive(input$predict_btn, {
     model_info <- prediction_model()
     
@@ -914,41 +704,27 @@ function(input, output, session) {
     home_win_pct <- if(home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
     away_win_pct <- if(away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
     
-    # Calculate the actual spread value based on which team is favored
-    actual_spread <- if(input$pred_home_favored) {
-      -abs(input$pred_spread)  # Home favored = negative spread
-    } else {
-      abs(input$pred_spread)   # Away favored = positive spread
-    }
-    
-    # Create prediction data with user inputs using REAL scoring stats
+    # Create prediction data with user inputs
     new_data <- data.frame(
-      spread_weighted = actual_spread * 0.5,
+      spread_weighted = input$pred_spread * 3,  # Apply same weighting as training
       is_indoor = (input$pred_stadium == "Indoor"),
       schedule_week = input$pred_week,
       home_strength = home_win_pct,
       away_strength = away_win_pct,
       
-      # Use actual average points scored/allowed from user input
-      home_off_strength = log(input$pred_home_avg_scored+1) * 5,
-      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 5),
-      away_off_strength = log(input$pred_away_avg_scored+1) * 5,
-      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 5)
+      # FIXED: Convert user input ranks to strength scores
+      home_off_strength = 33 - input$pred_home_off_rank,
+      home_def_strength = 33 - input$pred_home_def_rank,
+      away_off_strength = 33 - input$pred_away_off_rank,
+      away_def_strength = 33 - input$pred_away_def_rank
     )
     
     # Get probability from Random Forest
     prob <- predict(model_info$model, newdata = new_data, type = "prob")[,2]
     
-    # Apply spread-based adjustment to ensure favored teams are heavily favored
-    spread_adjustment <- actual_spread*(-0.01) # ~1% per point of spread
-    adjusted_prob <- prob + spread_adjustment
-    
-    # Ensure probability stays within reasonable bounds
-    adjusted_prob <- max(0.05, min(0.95, adjusted_prob))
-    
     list(
-      prob_home = adjusted_prob,
-      prob_away = 1 - adjusted_prob,
+      prob_home = prob,
+      prob_away = 1 - prob,
       home_record = paste0(input$pred_home_wins, "-", input$pred_home_losses),
       away_record = paste0(input$pred_away_wins, "-", input$pred_away_losses)
     )
@@ -1027,29 +803,10 @@ function(input, output, session) {
     prob_home <- result$prob_home
     prob_away <- result$prob_away
     
-    # Calculate the actual spread value based on which team is favored
-    actual_spread <- if(input$pred_home_favored) {
-      -abs(input$pred_spread)  # Home favored = negative spread
-    } else {
-      abs(input$pred_spread)   # Away favored = positive spread
-    }
-    
-    # Calculate implied probability from spread using standard conversion
-    spread <- actual_spread
-    if (abs(spread) < 1) {
-      implied_prob_home <- 0.50
-    } else if (abs(spread) < 3) {
-      implied_prob_home <- 0.50 + (spread * -0.03)  # ~3% per point for small spreads
-    } else if (abs(spread) < 7) {
-      implied_prob_home <- 0.50 + (spread * -0.035) # ~3.5% per point for medium spreads
-    } else if (abs(spread) < 10) {
-      implied_prob_home <- 0.50 + (spread * -0.04)  # ~4% per point for larger spreads
-    } else {
-      implied_prob_home <- 0.50 + (spread * -0.045) # ~4.5% per point for big spreads
-    }
-    
-    # Keep within reasonable bounds
-    implied_prob_home <- max(0.05, min(0.95, implied_prob_home))
+    # Calculate implied probability from spread
+    spread <- input$pred_spread
+    implied_prob_home <- 0.5 + (spread * -0.025)
+    implied_prob_home <- max(0.2, min(0.8, implied_prob_home))
     
     # Calculate edge
     edge_home <- (prob_home - implied_prob_home) * 100
@@ -1064,7 +821,7 @@ function(input, output, session) {
         p(paste0("Model edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "% (need >", value_threshold, "% for value)"))
       )
     } else if (edge_home > value_threshold) {
-      home_odds <- ifelse(actual_spread < -7, -200, ifelse(actual_spread < -3, -150, -110))
+      home_odds <- ifelse(spread < -7, -200, ifelse(spread < -3, -150, -110))
       payout <- 100 / (abs(home_odds) / 100)
       ev <- (prob_home * payout) - ((1 - prob_home) * 100)
       
@@ -1085,8 +842,8 @@ function(input, output, session) {
           style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     } else {
-      away_odds <- ifelse(actual_spread > 7, -250, ifelse(actual_spread > 3, -180, -120))
-      payout <- 100 / (abs(away_odds) / 100)
+      away_odds <- ifelse(spread > 7, 250, ifelse(spread > 3, 180, 120))
+      payout <- 100 * (away_odds / 100)
       ev <- (prob_away * payout) - ((1 - prob_away) * 100)
       
       tagList(
@@ -1139,7 +896,7 @@ function(input, output, session) {
     
     importance_df <- as.data.frame(importance(model_info$model))
     importance_df$Variable <- c("Spread (Weighted)", "Indoor", "Week", "Home Win %", "Away Win %",
-                                "Home Avg Scored", "Home Avg Allowed", "Away Avg Scored", "Away Avg Allowed")
+                                "Home Off Strength", "Home Def Strength", "Away Off Strength", "Away Def Strength")
     importance_df <- importance_df %>%
       arrange(desc(MeanDecreaseGini)) %>%
       mutate(Importance = MeanDecreaseGini) %>%
