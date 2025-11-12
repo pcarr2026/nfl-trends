@@ -6,10 +6,10 @@ library(dplyr)
 library(tidyverse)
 library(plotly)
 library(htmltools)
+library(shinyStorePlus)
 
 ui <- dashboardPage(
   skin = "blue",
-  
   dashboardHeader(
     title = span(
       icon("football-ball", style = "margin-right: 10px;"),
@@ -33,6 +33,7 @@ ui <- dashboardPage(
   ),
   
   dashboardBody(
+    initStore(),
     # Custom CSS for modern styling
     tags$head(
       tags$style(HTML("

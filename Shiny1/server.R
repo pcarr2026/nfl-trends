@@ -1,7 +1,9 @@
 function(input, output, session) {
     
     # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
-    
+  setupStorage(
+    appId = "nfl_betting_library",
+    inputs = TRUE)
     # NFL Team Colors
     team_colors <- reactive({
       data.frame(
