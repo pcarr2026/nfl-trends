@@ -619,8 +619,8 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_home_avg_scored", "Avg Points Scored:", value = 24, min = 0, max = 100, step = 0.5)),
-                             column(6, numericInput("pred_home_avg_allowed", "Avg Points Allowed:", value = 22, min = 0, max = 100, step = 0.5))
+                             column(6, numericInput("pred_home_avg_scored", "Avg Points Scored:", value = 24, min = 0, max = 100, step = 0.1)),
+                             column(6, numericInput("pred_home_avg_allowed", "Avg Points Allowed:", value = 22, min = 0, max = 100, step = 0.1))
                            ),
                            
                            hr(),
@@ -634,16 +634,25 @@ ui <- dashboardPage(
                            ),
                            
                            fluidRow(
-                             column(6, numericInput("pred_away_avg_scored", "Avg Points Scored:", value = 22, min = 0, max = 100, step = 0.5)),
-                             column(6, numericInput("pred_away_avg_allowed", "Avg Points Allowed:", value = 24, min = 0, max = 100, step = 0.5))
+                             column(6, numericInput("pred_away_avg_scored", "Avg Points Scored:", value = 22, min = 0, max = 100, step = 0.1)),
+                             column(6, numericInput("pred_away_avg_allowed", "Avg Points Allowed:", value = 24, min = 0, max = 100, step = 0.1))
                            ),
                            
                            hr(),
                            
                            h4(icon("cog"), " Game Conditions"),
                            
-                           numericInput("pred_spread", "Spread (+ = away favored, - = home favored):",
-                                        value = 3, min = -25, max = 25, step = 0.5),
+                           fluidRow(
+                             column(6,
+                                    numericInput("pred_spread", "Spread (points):",
+                                                 value = 3, min = 0.5, max = 25, step = 0.5)
+                             ),
+                             column(6,
+                                    br(),
+                                    checkboxInput("pred_home_favored", "Home Team Favored?", value = TRUE)
+                             ),
+                           ),
+                           helpText(icon("info-circle"), " Check the box if the home team is favored. The spread will be applied with the correct sign automatically."),
                            
                            selectInput("pred_stadium", "Stadium Type:",
                                        choices = c("Outdoor", "Indoor"),

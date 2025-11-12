@@ -824,7 +824,7 @@ function(input, output, session) {
     }
   })
   
-  # Build Random Forest prediction model with real offensive/defensive stats
+  # Build Random Forest model with real offensive/defensive stats
   prediction_model <- reactive({
     data <- nfl_data()
     
@@ -864,13 +864,20 @@ function(input, output, session) {
         away_strength = away_win_pct,
         
         # Use actual scoring metrics instead of synthetic rankings
-        home_off_strength = log(home_avg_scored + 1) * 10,     # Higher = better offense
-        home_def_strength = 75 - (log(home_avg_allowed+1) * 10),  # Higher = better defense (fewer points allowed)
-        away_off_strength = log(away_avg_scored+1) * 10,     # Higher = better offense
-        away_def_strength = 75 - (log(away_avg_allowed+1) * 10),  # Higher = better defense (fewer points allowed)
+        home_off_strength = log(home_avg_scored + 1) * 5,     # Higher = better offense
+        home_def_strength = 75 - (log(home_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
+        away_off_strength = log(away_avg_scored+1) * 5,     # Higher = better offense
+        away_def_strength = 75 - (log(away_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
         
-        # Add spread multiplier
-        spread_weighted = spread_favorite * 4
+        # CORRECTED: Encode spread from HOME TEAM perspective (negative = home favored)
+        # This ensures symmetry - the model learns "negative spread = team wins more often"
+        spread_weighted = case_when(
+          is.na(spread_favorite) ~ 0,
+          is.na(team_favorite_name) ~ 0,
+          team_home == team_favorite_name ~ -abs(spread_favorite) * 0.5,  # Home favored: negative
+          team_away == team_favorite_name ~ abs(spread_favorite) * 0.5,   # Away favored: positive
+          TRUE ~ 0
+        )
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
@@ -899,27 +906,41 @@ function(input, output, session) {
     home_win_pct <- if(home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
     away_win_pct <- if(away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
     
+    # Calculate the actual spread value based on which team is favored
+    actual_spread <- if(input$pred_home_favored) {
+      -abs(input$pred_spread)  # Home favored = negative spread
+    } else {
+      abs(input$pred_spread)   # Away favored = positive spread
+    }
+    
     # Create prediction data with user inputs using REAL scoring stats
     new_data <- data.frame(
-      spread_weighted = input$pred_spread * 4,  # Apply same weighting as training
+      spread_weighted = actual_spread * 0.5,
       is_indoor = (input$pred_stadium == "Indoor"),
       schedule_week = input$pred_week,
       home_strength = home_win_pct,
       away_strength = away_win_pct,
       
       # Use actual average points scored/allowed from user input
-      home_off_strength = log(input$pred_home_avg_scored+1) * 10,           # Higher = better offense
-      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 10),     # Higher = better defense
-      away_off_strength = log(input$pred_away_avg_scored+1) * 10,           # Higher = better offense
-      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 10)      # Higher = better defense
+      home_off_strength = log(input$pred_home_avg_scored+1) * 5,
+      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 5),
+      away_off_strength = log(input$pred_away_avg_scored+1) * 5,
+      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 5)
     )
     
     # Get probability from Random Forest
     prob <- predict(model_info$model, newdata = new_data, type = "prob")[,2]
     
+    # Apply spread-based adjustment to ensure favored teams are heavily favored
+    spread_adjustment <- actual_spread*(-0.01) # ~1% per point of spread
+    adjusted_prob <- prob + spread_adjustment
+    
+    # Ensure probability stays within reasonable bounds
+    adjusted_prob <- max(0.05, min(0.95, adjusted_prob))
+    
     list(
-      prob_home = prob,
-      prob_away = 1 - prob,
+      prob_home = adjusted_prob,
+      prob_away = 1 - adjusted_prob,
       home_record = paste0(input$pred_home_wins, "-", input$pred_home_losses),
       away_record = paste0(input$pred_away_wins, "-", input$pred_away_losses)
     )
@@ -998,10 +1019,29 @@ function(input, output, session) {
     prob_home <- result$prob_home
     prob_away <- result$prob_away
     
-    # Calculate implied probability from spread
-    spread <- input$pred_spread
-    implied_prob_home <- 0.5 + (spread * -0.025)
-    implied_prob_home <- max(0.2, min(0.8, implied_prob_home))
+    # Calculate the actual spread value based on which team is favored
+    actual_spread <- if(input$pred_home_favored) {
+      -abs(input$pred_spread)  # Home favored = negative spread
+    } else {
+      abs(input$pred_spread)   # Away favored = positive spread
+    }
+    
+    # Calculate implied probability from spread using standard conversion
+    spread <- actual_spread
+    if (abs(spread) < 1) {
+      implied_prob_home <- 0.50
+    } else if (abs(spread) < 3) {
+      implied_prob_home <- 0.50 + (spread * -0.03)  # ~3% per point for small spreads
+    } else if (abs(spread) < 7) {
+      implied_prob_home <- 0.50 + (spread * -0.035) # ~3.5% per point for medium spreads
+    } else if (abs(spread) < 10) {
+      implied_prob_home <- 0.50 + (spread * -0.04)  # ~4% per point for larger spreads
+    } else {
+      implied_prob_home <- 0.50 + (spread * -0.045) # ~4.5% per point for big spreads
+    }
+    
+    # Keep within reasonable bounds
+    implied_prob_home <- max(0.05, min(0.95, implied_prob_home))
     
     # Calculate edge
     edge_home <- (prob_home - implied_prob_home) * 100
@@ -1016,7 +1056,7 @@ function(input, output, session) {
         p(paste0("Model edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "% (need >", value_threshold, "% for value)"))
       )
     } else if (edge_home > value_threshold) {
-      home_odds <- ifelse(spread < -7, -200, ifelse(spread < -3, -150, -110))
+      home_odds <- ifelse(actual_spread < -7, -200, ifelse(actual_spread < -3, -150, -110))
       payout <- 100 / (abs(home_odds) / 100)
       ev <- (prob_home * payout) - ((1 - prob_home) * 100)
       
@@ -1037,8 +1077,8 @@ function(input, output, session) {
           style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     } else {
-      away_odds <- ifelse(spread > 7, 250, ifelse(spread > 3, 180, 120))
-      payout <- 100 * (away_odds / 100)
+      away_odds <- ifelse(actual_spread > 7, -250, ifelse(actual_spread > 3, -180, -120))
+      payout <- 100 / (abs(away_odds) / 100)
       ev <- (prob_away * payout) - ((1 - prob_away) * 100)
       
       tagList(
