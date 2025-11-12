@@ -1775,12 +1775,17 @@ function(input, output, session) {
     }
     
     # Format for display
+    # Format for display
     display_bets <- bets %>%
-      select(date, is_parlay, home_team, away_team, bet_type, wagered, won, lost, net, result, notes) %>%
       mutate(
+        parlay_display = ifelse(is_parlay, "Yes", "No"),
         type_display = ifelse(is_parlay, paste0("🎲 ", bet_type), bet_type),
-        wagered = paste0("$", formatC(wagered, format = "f", digits = 0, big.mark = ","))
-      )
+        wagered_display = paste0("$", formatC(wagered, format = "f", digits = 0, big.mark = ",")),
+        won_display = paste0("$", formatC(won, format = "f", digits = 0, big.mark = ",")),
+        lost_display = paste0("$", formatC(lost, format = "f", digits = 0, big.mark = ",")),
+        net_display = paste0(ifelse(net >= 0, "+", ""), "$", formatC(net, format = "f", digits = 0, big.mark = ","))
+      ) %>%
+      select(date, parlay_display, home_team, away_team, type_display, wagered_display, won_display, lost_display, net_display, result, notes)
     
     names(display_bets) <- c("Date", "Parlay?", "Home", "Away", "Type", "Wagered", "Won", "Lost", "Net", "Result", "Notes")
     
@@ -1789,12 +1794,13 @@ function(input, output, session) {
       options = list(
         pageLength = 10,
         dom = 'frtip',
-        scrollX = TRUE
+        scrollX = TRUE,
+        searching = TRUE,
+        ordering = TRUE
       ),
       rownames = FALSE
     )
   })
-  
   # Export CSV
   output$lib_export_csv <- downloadHandler(
     filename = function() {
