@@ -528,9 +528,6 @@ ui <- dashboardPage(
       # ----------------------------------------
       # BETTING ANALYSIS TAB
       # ----------------------------------------
-      # ----------------------------------------
-      # BETTING ANALYSIS TAB
-      # ----------------------------------------
       tabItem(tabName = "betting_analysis",
               h2(icon("chart-bar"), " NFL Betting Analysis (2000-2025)"),
               fluidRow(

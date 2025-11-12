@@ -940,7 +940,7 @@ function(input, output, session) {
     prob <- predict(model_info$model, newdata = new_data, type = "prob")[,2]
     
     # Apply spread-based adjustment to ensure favored teams are heavily favored
-    spread_adjustment <- actual_spread*(-0.01) # ~1% per point of spread
+    spread_adjustment <- actual_spread*(0.0075)
     adjusted_prob <- prob + spread_adjustment
     
     # Ensure probability stays within reasonable bounds
@@ -1036,20 +1036,21 @@ function(input, output, session) {
     
     # Calculate implied probability from spread using standard conversion
     spread <- actual_spread
+    
+    # More accurate Vegas implied probability calculation
     if (abs(spread) < 1) {
       implied_prob_home <- 0.50
     } else if (abs(spread) < 3) {
-      implied_prob_home <- 0.50 + (spread * -0.03)  # ~3% per point for small spreads
+      implied_prob_home <- 0.50 + (spread * -0.03)
     } else if (abs(spread) < 7) {
-      implied_prob_home <- 0.50 + (spread * -0.035) # ~3.5% per point for medium spreads
+      implied_prob_home <- 0.50 + (spread * -0.035)
     } else if (abs(spread) < 10) {
-      implied_prob_home <- 0.50 + (spread * -0.04)  # ~4% per point for larger spreads
+      implied_prob_home <- 0.50 + (spread * -0.04)
     } else {
-      implied_prob_home <- 0.50 + (spread * -0.045) # ~4.5% per point for big spreads
+      implied_prob_home <- 0.50 + (spread * -0.045)
     }
     
-    # Keep within reasonable bounds
-    implied_prob_home <- max(0.05, min(0.95, implied_prob_home))
+    implied_prob_home <- max(0.15, min(0.85, implied_prob_home))
     
     # Calculate edge
     edge_home <- (prob_home - implied_prob_home) * 100
@@ -1057,17 +1058,45 @@ function(input, output, session) {
     
     value_threshold <- 5
     
-    if (abs(edge_home) < value_threshold) {
-      tagList(
-        p(icon("info-circle"), strong(" No Strong Value Bet Found"), style = "font-size: 16px; color: #6c757d;"),
-        p("Model prediction is close to Vegas expectations. This is a fairly-priced game."),
-        p(paste0("Model edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "% (need >", value_threshold, "% for value)"))
-      )
-    } else if (edge_home > value_threshold) {
+    # Calculate EV for both teams
+    # Home team EV
+    if (actual_spread < 0) {
       home_odds <- ifelse(actual_spread < -7, -200, ifelse(actual_spread < -3, -150, -110))
-      payout <- 100 / (abs(home_odds) / 100)
-      ev <- (prob_home * payout) - ((1 - prob_home) * 100)
-      
+      home_payout <- 100 / (abs(home_odds) / 100)
+    } else {
+      home_odds <- ifelse(actual_spread > 7, 250, ifelse(actual_spread > 3, 180, 120))
+      home_payout <- 100 * (home_odds / 100)
+    }
+    home_ev <- (prob_home * home_payout) - ((1 - prob_home) * 100)
+    
+    # Away team EV
+    if (actual_spread > 0) {
+      away_odds <- ifelse(actual_spread > 7, -200, ifelse(actual_spread > 3, -150, -110))
+      away_payout <- 100 / (abs(away_odds) / 100)
+    } else {
+      away_odds <- ifelse(actual_spread < -7, 250, ifelse(actual_spread < -3, 180, 120))
+      away_payout <- 100 * (away_odds / 100)
+    }
+    away_ev <- (prob_away * away_payout) - ((1 - prob_away) * 100)
+    
+    # Determine if there's a value bet (positive EV AND edge > threshold)
+    home_has_value <- (edge_home > value_threshold && home_ev > 0)
+    away_has_value <- (edge_away > value_threshold && away_ev > 0)
+    
+    # Display results
+    if (!home_has_value && !away_has_value) {
+      # No value bet found
+      tagList(
+        p(icon("info-circle"), strong(" No Value Bet Found"), style = "font-size: 16px; color: #6c757d;"),
+        p("Model prediction does not show positive expected value for either team."),
+        tags$ul(
+          tags$li(paste0(input$pred_home_team, " EV: ", ifelse(home_ev > 0, "+", ""), "$", round(home_ev, 2), " per $100 (Edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "%)")),
+          tags$li(paste0(input$pred_away_team, " EV: ", ifelse(away_ev > 0, "+", ""), "$", round(away_ev, 2), " per $100 (Edge: ", ifelse(edge_away > 0, "+", ""), round(edge_away, 1), "%)"))
+        ),
+        p(style = "color: #dc3545; font-weight: bold;", "⚠️ Negative EV means you would lose money over time on these bets.")
+      )
+    } else if (home_has_value && (!away_has_value || home_ev > away_ev)) {
+      # Home team is the value bet
       tagList(
         div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
             p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_home_team))), 
@@ -1080,15 +1109,12 @@ function(input, output, session) {
           tags$li(paste0("Vegas: ~", round(implied_prob_home * 100, 1), "% implied")),
           tags$li(paste0("Your Edge: +", round(edge_home, 1), "%"))
         ),
-        p(strong(paste0("Expected Value: ", ifelse(ev > 0, "+", ""), "$", round(ev, 2), " per $100 bet"))),
-        p(ifelse(ev > 10, "🔥 Strong value!", ifelse(ev > 5, "✅ Good value", "Slight edge")), 
-          style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+        p(strong(paste0("Expected Value: +$", round(home_ev, 2), " per $100 bet"))),
+        p(ifelse(home_ev > 10, "🔥 Strong value!", ifelse(home_ev > 5, "✅ Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(home_ev > 10, "#28a745", ifelse(home_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     } else {
-      away_odds <- ifelse(actual_spread > 7, -250, ifelse(actual_spread > 3, -180, -120))
-      payout <- 100 / (abs(away_odds) / 100)
-      ev <- (prob_away * payout) - ((1 - prob_away) * 100)
-      
+      # Away team is the value bet
       tagList(
         div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
             p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_away_team))), 
@@ -1101,9 +1127,9 @@ function(input, output, session) {
           tags$li(paste0("Vegas: ~", round((1 - implied_prob_home) * 100, 1), "% implied")),
           tags$li(paste0("Your Edge: +", round(abs(edge_away), 1), "%"))
         ),
-        p(strong(paste0("Expected Value: ", ifelse(ev > 0, "+", ""), "$", round(ev, 2), " per $100 bet"))),
-        p(ifelse(ev > 10, "🔥 Strong value!", ifelse(ev > 5, "✅ Good value", "Slight edge")), 
-          style = paste0("color: ", ifelse(ev > 10, "#28a745", ifelse(ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+        p(strong(paste0("Expected Value: +$", round(away_ev, 2), " per $100 bet"))),
+        p(ifelse(away_ev > 10, "🔥 Strong value!", ifelse(away_ev > 5, "✅ Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(away_ev > 10, "#28a745", ifelse(away_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     }
   })
