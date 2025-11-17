@@ -267,7 +267,7 @@ function(input, output, session) {
                              "Playoffs"),
         season_type = factor(season_type, 
                              levels = c(paste0("Week ", 1:18), "Playoffs"),
-                             ordered = TRUE),
+                             ordered = TRUE), 
         # Calculate total points
         total_points = score_home + score_away,
         
@@ -1339,6 +1339,16 @@ function(input, output, session) {
       select(all_of(factors)) %>%
       scale()
     
+    # PCA 
+    if(input$use_pca) {
+      pca_result <- prcomp(cluster_matrix)
+      cluster_matrix <- pca_result$x[, 1:2]  # Use first 2 principal components
+      
+      # Update axis labels for PCA
+      cluster_data$x_axis <- cluster_matrix[, 1]
+      cluster_data$y_axis <- cluster_matrix[, 2]
+    }
+    
     # Perform k-means clustering
     set.seed(123)
     kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
@@ -1373,6 +1383,7 @@ function(input, output, session) {
     ))
   })
   
+ 
   # Cluster plot
   output$cluster_plot <- renderPlotly({
     results <- cluster_results()
@@ -1385,7 +1396,7 @@ function(input, output, session) {
     data <- results$data
     factors <- results$factors
     
-    # Create factor labels for axes
+    # CREATE FACTOR LABELS 
     factor_labels <- c(
       "win_pct" = "Win %",
       "avg_points_scored" = "Avg Points Scored",
@@ -1399,9 +1410,18 @@ function(input, output, session) {
       "away_win_rate" = "Away Win %"
     )
     
-    x_label <- factor_labels[factors[1]]
-    y_label <- factor_labels[factors[2]]
+    # UPDATE LABELS BASED ON PCA
+    if(!is.null(results$use_pca) && results$use_pca) {
+      x_label <- "Principal Component 1"
+      y_label <- "Principal Component 2"
+      title_text <- "Team Clusters (PCA)"
+    } else {
+      x_label <- factor_labels[factors[1]]
+      y_label <- factor_labels[factors[2]]
+      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
+    }
     
+    # plot_ly Code
     plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
             type = 'scatter', mode = 'markers+text',
             text = ~team,
@@ -1410,14 +1430,14 @@ function(input, output, session) {
             hovertext = ~paste0(
               "<b>", team, "</b><br>",
               "Cluster: ", cluster, "<br>",
-              x_label, ": ", x_axis, "<br>",
-              y_label, ": ", y_axis
+              x_label, ": ", round(x_axis, 1), "<br>",
+              y_label, ": ", round(y_axis, 1)
             ),
             hoverinfo = 'text') %>%
       layout(
-        title = paste("Team Clusters by", x_label, "vs", y_label),
-        xaxis = list(title = x_label),
-        yaxis = list(title = y_label),
+        title = title_text,  # CHANGED: was hardcoded, now uses title_text variable
+        xaxis = list(title = x_label),  # CHANGED: was hardcoded
+        yaxis = list(title = y_label),  # CHANGED: was hardcoded
         showlegend = TRUE
       )
   })
