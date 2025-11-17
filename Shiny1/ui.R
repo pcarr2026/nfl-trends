@@ -6,7 +6,7 @@ library(dplyr)
 library(tidyverse)
 library(plotly)
 library(htmltools)
-library(shinyStorePlus)
+library(shinyStore)
 
 ui <- dashboardPage(
   skin = "blue",
@@ -33,7 +33,7 @@ ui <- dashboardPage(
   ),
   
   dashboardBody(
-    initStore(),
+    initStore("nfl_betting_app", "shinyStore-ex"),
     # Custom CSS for modern styling
     tags$head(
       tags$style(HTML("
@@ -392,17 +392,17 @@ ui <- dashboardPage(
         }
       "))
     ),
-      
-      # ADD THIS LINE - Dynamic CSS based on favorite team
-      uiOutput("dynamic_css"),
-      
-        # ... rest of your tabs
     
-      tabItems(
+    # ADD THIS LINE - Dynamic CSS based on favorite team
+    uiOutput("dynamic_css"),
+    
+    # ... rest of your tabs
+    
+    tabItems(
       # ----------------------------------------
       # HOME TAB - Enhanced Design
       # ----------------------------------------
-        tabItem(tabName = "home",
+      tabItem(tabName = "home",
               fluidRow(
                 column(width = 12,
                        tags$div(
@@ -1006,6 +1006,23 @@ ui <- dashboardPage(
                            
                            sliderInput("n_clusters", "Number of Clusters:",
                                        min = 1, max = 4, value = 4, step = 1),
+                           #PCA checkbox
+                           checkboxInput("use_pca", "Use PCA (Principal Component Analysis)", value = FALSE),
+                           
+                           hr(),
+                           
+                           h4(icon("info-circle"), " About Clustering:"),
+                           p("K-means clustering groups teams with similar characteristics..."),
+                           
+                           #PCA conditional panel
+                           conditionalPanel(
+                             condition = "input.use_pca == true",
+                             div(style = "background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 10px;",
+                                 p(icon("info-circle"), strong(" PCA Enabled"), style = "margin: 0; color: #013369;"),
+                                 p("Principal components capture the maximum variance in your data. PC1 and PC2 explain the most variation across both factors.", 
+                                   style = "margin: 5px 0 0 0; font-size: 13px;")
+                             )
+                           ),
                            
                            hr(),
                            
@@ -1031,6 +1048,7 @@ ui <- dashboardPage(
                        )
                 )
               )
+<<<<<<< HEAD
           ),
     
     # ----------------------------------------
@@ -1169,23 +1187,169 @@ ui <- dashboardPage(
                                       class = "btn-danger btn-block",
                                       icon = icon("trash"))
                      )
+=======
+      ),  # <-- ADD COMMA HERE - THIS CLOSES THE CLUSTER ANALYSIS TAB
+      
+      # ----------------------------------------
+      # BETTING LIBRARY TAB - ADD THIS ENTIRE SECTION
+      # ----------------------------------------
+      tabItem(tabName = "betting_library",
+              h2(icon("book"), " My Betting Library"),
+              
+              fluidRow(
+                # Summary Cards
+                column(3,
+                       div(class = "metric-card",
+                           h4("Total Bets"),
+                           h2(textOutput("lib_total_bets", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("Total Wagered"),
+                           h2(textOutput("lib_total_wagered", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("Net Profit/Loss"),
+                           h2(textOutput("lib_net_profit", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("Win Rate"),
+                           h2(textOutput("lib_win_rate", inline = TRUE))
+                       )
+                )
+>>>>>>> ae05d9fd0edc2b21b6afcdf96058da0562ff11ab
               ),
               
-              # Bets Table
-              column(8,
-                     box(width = NULL, solidHeader = TRUE,
-                         title = tags$span(style = "color: white;", "Your Bets"),
-                         
-                         DT::dataTableOutput("lib_bets_table"),
-                         
-                         br(),
-                         
-                         downloadButton("lib_export_csv", "Export to CSV", 
-                                        class = "btn-primary", icon = icon("download"))
-                     )
+              br(),
+              
+              fluidRow(
+                column(3,
+                       div(class = "metric-card",
+                           h4("Current Streak"),
+                           h2(textOutput("lib_streak", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("Best Bet Type"),
+                           h2(textOutput("lib_best_type", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("Avg Bet Size"),
+                           h2(textOutput("lib_avg_bet", inline = TRUE))
+                       )
+                ),
+                column(3,
+                       div(class = "metric-card",
+                           h4("ROI"),
+                           h2(textOutput("lib_roi", inline = TRUE))
+                       )
+                )
+              ),
+              
+              br(),
+              
+              fluidRow(
+                # Add Bet Form
+                # Add Bet Form
+                column(4,
+                       box(width = NULL, status = "primary", solidHeader = TRUE,
+                           title = tags$span(style = "color: white;", "Add New Bet"),
+                           
+                           checkboxInput("lib_is_parlay", "Parlay Bet?", value = FALSE),
+                           
+                           conditionalPanel(
+                             condition = "input.lib_is_parlay == false",
+                             selectInput("lib_home_team", "Home Team:", 
+                                         choices = c("Select..." = "", sort(c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                                                                              "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                                                                              "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                                                                              "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                                                                              "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                                                                              "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                                                                              "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                                                                              "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")))),
+                             selectInput("lib_away_team", "Away Team:", 
+                                         choices = c("Select..." = "", sort(c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                                                                              "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                                                                              "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                                                                              "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                                                                              "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                                                                              "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                                                                              "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                                                                              "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")))),
+                             
+                             selectInput("lib_bet_type", "Bet Type:",
+                                         choices = c("Favorite", "Underdog", "Over", "Under"))
+                           ),
+                           
+                           conditionalPanel(
+                             condition = "input.lib_is_parlay == true",
+                             numericInput("lib_num_legs", "Number of Legs:", 
+                                          value = 2, min = 2, max = 10, step = 1),
+                             textAreaInput("lib_parlay_details", "Parlay Details:",
+                                           placeholder = "e.g., Chiefs -3, Bills Over 47.5, Eagles ML",
+                                           rows = 4)
+                           ),
+                           
+                           selectInput("lib_bet_type", "Bet Type:",
+                                       choices = c("Favorite", "Underdog", "Over", "Under")),
+                           
+                           numericInput("lib_amount_wagered", "Amount Wagered ($):",
+                                        value = 100, min = 1, step = 1),
+                           
+                           numericInput("lib_amount_won", "Amount Won ($):",
+                                        value = 0, min = 0, step = 1),
+                           
+                           numericInput("lib_amount_lost", "Amount Lost ($):",
+                                        value = 0, min = 0, step = 1),
+                           
+                           textAreaInput("lib_notes", "Notes (optional):",
+                                         placeholder = "Any additional details...",
+                                         rows = 3),
+                           
+                           hr(),
+                           
+                           actionButton("lib_add_bet", "Add Bet", 
+                                        class = "btn-primary btn-block",
+                                        icon = icon("plus")),
+                           
+                           br(), br(),
+                           
+                           actionButton("lib_clear_all", "Clear All Bets", 
+                                        class = "btn-danger btn-block",
+                                        icon = icon("trash"))
+                       )
+                ),
+                
+                # Bets Table
+                column(8,
+                       box(width = NULL, solidHeader = TRUE,
+                           title = tags$span(style = "color: white;", "Your Bets"),
+                           
+                           DT::dataTableOutput("lib_bets_table"),
+                           
+                           br(),
+                           
+                           downloadButton("lib_export_csv", "Export to CSV", 
+                                          class = "btn-primary", icon = icon("download"))
+                       )
+                )
               )
+<<<<<<< HEAD
             )
     )
       )
+=======
+      )  
+    )
+>>>>>>> ae05d9fd0edc2b21b6afcdf96058da0562ff11ab
   )
 )

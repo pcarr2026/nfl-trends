@@ -1,106 +1,105 @@
 function(input, output, session) {
+  
+  # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
+  # Initialize shinyStore
+  
+  # NFL Team Colors
+  team_colors <- reactive({
+    data.frame(
+      team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+               "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+               "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+               "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+               "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+               "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+               "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+               "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+      primary_color = c("#97233F", "#A71930", "#241773", "#00338D",
+                        "#0085CA", "#0B162A", "#FB4F14", "#311D00",
+                        "#041E42", "#FB4F14", "#0076B6", "#203731",
+                        "#03202F", "#002C5F", "#006778", "#E31837",
+                        "#000000", "#0080C6", "#003594", "#008E97",
+                        "#4F2683", "#002244", "#D3BC8D", "#0B2265",
+                        "#125740", "#004C54", "#FFB612", "#AA0000",
+                        "#002244", "#D50A0A", "#0C2340", "#773141"),
+      secondary_color = c("#FFB612", "#000000", "#9E7C0C", "#C60C30",
+                          "#101820", "#C83803", "#000000", "#FF3C00",
+                          "#869397", "#002244", "#B0B7BC", "#FFB612",
+                          "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
+                          "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
+                          "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
+                          "#000000", "#A5ACAF", "#000000", "#B3995D",
+                          "#69BE28", "#FF7900", "#418FDE", "#FFB612"),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  # Show team selection modal on startup
+  observe({
+    showModal(modalDialog(
+      title = tags$div(
+        style = "text-align: center;",
+        icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
+        h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
+      ),
+      tags$div(
+        style = "text-align: center; padding: 20px;",
+        h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
+        p("The dashboard will personalize to your team's colors!"),
+        selectInput("favorite_team_select", NULL,
+                    choices = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+                                "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+                                "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+                                "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+                                "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+                                "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+                                "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+                                "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+                    selected = "Kansas City Chiefs",
+                    width = "100%")
+      ),
+      footer = tagList(
+        actionButton("skip_team", "Skip", class = "btn-default"),
+        actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
+                     icon = icon("check"))
+      ),
+      size = "m",
+      easyClose = FALSE
+    ))
+  })
+  
+  # Store favorite team
+  favorite_team <- reactiveVal(NULL)
+  
+  observeEvent(input$confirm_team, {
+    favorite_team(input$favorite_team_select)
+    removeModal()
+  })
+  
+  observeEvent(input$skip_team, {
+    favorite_team("Default")
+    removeModal()
+  })
+  
+  # Generate dynamic CSS based on favorite team
+  output$dynamic_css <- renderUI({
+    req(favorite_team())
     
-    # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
-  setupStorage(
-    appId = "nfl_betting_library",
-    inputs = TRUE)
-    # NFL Team Colors
-    team_colors <- reactive({
-      data.frame(
-        team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                 "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                 "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                 "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                 "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-        primary_color = c("#97233F", "#A71930", "#241773", "#00338D",
-                          "#0085CA", "#0B162A", "#FB4F14", "#311D00",
-                          "#041E42", "#FB4F14", "#0076B6", "#203731",
-                          "#03202F", "#002C5F", "#006778", "#E31837",
-                          "#000000", "#0080C6", "#003594", "#008E97",
-                          "#4F2683", "#002244", "#D3BC8D", "#0B2265",
-                          "#125740", "#004C54", "#FFB612", "#AA0000",
-                          "#002244", "#D50A0A", "#0C2340", "#773141"),
-        secondary_color = c("#FFB612", "#000000", "#9E7C0C", "#C60C30",
-                            "#101820", "#C83803", "#000000", "#FF3C00",
-                            "#869397", "#002244", "#B0B7BC", "#FFB612",
-                            "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
-                            "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
-                            "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
-                            "#000000", "#A5ACAF", "#000000", "#B3995D",
-                            "#69BE28", "#FF7900", "#418FDE", "#FFB612"),
-        stringsAsFactors = FALSE
-      )
-    })
+    if(favorite_team() == "Default") {
+      return(NULL)
+    }
     
-    # Show team selection modal on startup
-    observe({
-      showModal(modalDialog(
-        title = tags$div(
-          style = "text-align: center;",
-          icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
-          h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
-        ),
-        tags$div(
-          style = "text-align: center; padding: 20px;",
-          h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
-          p("The dashboard will personalize to your team's colors!"),
-          selectInput("favorite_team_select", NULL,
-                      choices = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                                  "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                                  "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                                  "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                                  "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                                  "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                                  "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                                  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-                      selected = "Kansas City Chiefs",
-                      width = "100%")
-        ),
-        footer = tagList(
-          actionButton("skip_team", "Skip", class = "btn-default"),
-          actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
-                       icon = icon("check"))
-        ),
-        size = "m",
-        easyClose = FALSE
-      ))
-    })
+    colors <- team_colors()
+    team_color_data <- colors[colors$team == favorite_team(), ]
     
-    # Store favorite team
-    favorite_team <- reactiveVal(NULL)
+    if(nrow(team_color_data) == 0) {
+      return(NULL)
+    }
     
-    observeEvent(input$confirm_team, {
-      favorite_team(input$favorite_team_select)
-      removeModal()
-    })
+    primary <- team_color_data$primary_color
+    secondary <- team_color_data$secondary_color
     
-    observeEvent(input$skip_team, {
-      favorite_team("Default")
-      removeModal()
-    })
-    
-    # Generate dynamic CSS based on favorite team
-    output$dynamic_css <- renderUI({
-      req(favorite_team())
-      
-      if(favorite_team() == "Default") {
-        return(NULL)
-      }
-      
-      colors <- team_colors()
-      team_color_data <- colors[colors$team == favorite_team(), ]
-      
-      if(nrow(team_color_data) == 0) {
-        return(NULL)
-      }
-      
-      primary <- team_color_data$primary_color
-      secondary <- team_color_data$secondary_color
-      
-      tags$style(HTML(paste0("
+    tags$style(HTML(paste0("
       /* Header Colors */
       .main-header .logo {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
@@ -186,12 +185,12 @@ function(input, output, session) {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
       }
     ")))
-    })
-    
-    # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
-    # Team logo URLs
-   
-      # ... rest of your code
+  })
+  
+  # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
+  # Team logo URLs
+  
+  # ... rest of your code
   
   # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
   # Team logo URLs
@@ -265,7 +264,9 @@ function(input, output, session) {
         season_type = ifelse(schedule_playoff == FALSE, 
                              paste0("Week ", schedule_week),
                              "Playoffs"),
-        
+        season_type = factor(season_type, 
+                             levels = c(paste0("Week ", 1:18), "Playoffs"),
+                             ordered = TRUE), 
         # Calculate total points
         total_points = score_home + score_away,
         
@@ -1336,6 +1337,16 @@ function(input, output, session) {
       select(all_of(factors)) %>%
       scale()
     
+    # PCA 
+    if(input$use_pca) {
+      pca_result <- prcomp(cluster_matrix)
+      cluster_matrix <- pca_result$x[, 1:2]  # Use first 2 principal components
+      
+      # Update axis labels for PCA
+      cluster_data$x_axis <- cluster_matrix[, 1]
+      cluster_data$y_axis <- cluster_matrix[, 2]
+    }
+    
     # Perform k-means clustering
     set.seed(123)
     kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
@@ -1370,6 +1381,7 @@ function(input, output, session) {
     ))
   })
   
+ 
   # Cluster plot
   output$cluster_plot <- renderPlotly({
     results <- cluster_results()
@@ -1382,7 +1394,7 @@ function(input, output, session) {
     data <- results$data
     factors <- results$factors
     
-    # Create factor labels for axes
+    # CREATE FACTOR LABELS 
     factor_labels <- c(
       "win_pct" = "Win %",
       "avg_points_scored" = "Avg Points Scored",
@@ -1396,9 +1408,18 @@ function(input, output, session) {
       "away_win_rate" = "Away Win %"
     )
     
-    x_label <- factor_labels[factors[1]]
-    y_label <- factor_labels[factors[2]]
+    # UPDATE LABELS BASED ON PCA
+    if(!is.null(results$use_pca) && results$use_pca) {
+      x_label <- "Principal Component 1"
+      y_label <- "Principal Component 2"
+      title_text <- "Team Clusters (PCA)"
+    } else {
+      x_label <- factor_labels[factors[1]]
+      y_label <- factor_labels[factors[2]]
+      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
+    }
     
+    # plot_ly Code
     plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
             type = 'scatter', mode = 'markers+text',
             text = ~team,
@@ -1407,14 +1428,14 @@ function(input, output, session) {
             hovertext = ~paste0(
               "<b>", team, "</b><br>",
               "Cluster: ", cluster, "<br>",
-              x_label, ": ", x_axis, "<br>",
-              y_label, ": ", y_axis
+              x_label, ": ", round(x_axis, 1), "<br>",
+              y_label, ": ", round(y_axis, 1)
             ),
             hoverinfo = 'text') %>%
       layout(
-        title = paste("Team Clusters by", x_label, "vs", y_label),
-        xaxis = list(title = x_label),
-        yaxis = list(title = y_label),
+        title = title_text,  # CHANGED: was hardcoded, now uses title_text variable
+        xaxis = list(title = x_label),  # CHANGED: was hardcoded
+        yaxis = list(title = y_label),  # CHANGED: was hardcoded
         showlegend = TRUE
       )
   })
@@ -1538,6 +1559,37 @@ function(input, output, session) {
       stringsAsFactors = FALSE
     )
   )
+  # Load data from localStorage on startup
+  # Load data from localStorage on startup
+  observe({
+    if (!is.null(input$store$betting_library_data)) {  # ✅ Use input$store consistently
+      stored_data <- input$store$betting_library_data
+      
+      # Convert from list format back to data frame
+      if(length(stored_data) > 0 && !is.null(stored_data[[1]])) {
+        tryCatch({
+          betting_library$bets <- do.call(rbind, lapply(stored_data, function(x) {
+            as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
+          }))
+        }, error = function(e) {
+          message("Error loading stored bets: ", e$message)
+        })
+      }
+    }
+  })
+  
+  # Save data to localStorage whenever it changes
+  observeEvent(betting_library$bets, {
+    # Convert data frame to list format for storage
+    if(nrow(betting_library$bets) > 0) {
+      data_list <- lapply(1:nrow(betting_library$bets), function(i) {
+        as.list(betting_library$bets[i, ])
+      })
+      updateStore(session, "betting_library_data", data_list)
+    } else {
+      updateStore(session, "betting_library_data", list())
+    }
+  }, ignoreInit = TRUE)
   
   # Get all bets
   all_bets <- reactive({
@@ -1841,4 +1893,3 @@ function(input, output, session) {
     }
   )
 }
-
