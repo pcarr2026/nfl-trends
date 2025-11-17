@@ -1048,7 +1048,6 @@ ui <- dashboardPage(
                        )
                 )
               )
-<<<<<<< HEAD
           ),
     
     # ----------------------------------------
@@ -1187,8 +1186,7 @@ ui <- dashboardPage(
                                       class = "btn-danger btn-block",
                                       icon = icon("trash"))
                      )
-=======
-      ),  # <-- ADD COMMA HERE - THIS CLOSES THE CLUSTER ANALYSIS TAB
+      ),
       
       # ----------------------------------------
       # BETTING LIBRARY TAB - ADD THIS ENTIRE SECTION
@@ -1222,7 +1220,6 @@ ui <- dashboardPage(
                            h2(textOutput("lib_win_rate", inline = TRUE))
                        )
                 )
->>>>>>> ae05d9fd0edc2b21b6afcdf96058da0562ff11ab
               ),
               
               br(),
@@ -1343,13 +1340,9 @@ ui <- dashboardPage(
                        )
                 )
               )
-<<<<<<< HEAD
+      )
             )
     )
-      )
-=======
-      )  
     )
->>>>>>> ae05d9fd0edc2b21b6afcdf96058da0562ff11ab
   )
 )
