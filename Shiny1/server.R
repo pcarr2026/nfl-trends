@@ -265,7 +265,9 @@ function(input, output, session) {
         season_type = ifelse(schedule_playoff == FALSE, 
                              paste0("Week ", schedule_week),
                              "Playoffs"),
-        
+        season_type = factor(season_type, 
+                             levels = c(paste0("Week ", 1:18), "Playoffs"),
+                             ordered = TRUE),
         # Calculate total points
         total_points = score_home + score_away,
         
