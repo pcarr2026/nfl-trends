@@ -788,7 +788,7 @@ function(input, output, session) {
       )
   })
   
-  # ========== NEW GAME PREDICTOR CODE ==========
+  # ========== GAME PREDICTOR CODE ==========
   
   # Populate team dropdowns
   observe({
@@ -870,22 +870,21 @@ function(input, output, session) {
       mutate(
         home_won = (winner == team_home),
         is_indoor = (stadium_type == "Indoor"),
-        home_strength = home_win_pct,
-        away_strength = away_win_pct,
+        home_strength = home_win_pct * 1.5,
+        away_strength = away_win_pct * 1.4,
         
         # Use actual scoring metrics instead of synthetic rankings
-        home_off_strength = log(home_avg_scored + 1) * 5,     # Higher = better offense
-        home_def_strength = 75 - (log(home_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
-        away_off_strength = log(away_avg_scored+1) * 5,     # Higher = better offense
-        away_def_strength = 75 - (log(away_avg_allowed+1) * 5),  # Higher = better defense (fewer points allowed)
+        home_off_strength = log(home_avg_scored + 1) * 5 * 1.3 ,     # Higher = better offense
+        home_def_strength = 75 - (log(home_avg_allowed+1) * 5 * 1.2),  # Higher = better defense (fewer points allowed)
+        away_off_strength = log(away_avg_scored+1) * 5 * 1.3,     # Higher = better offense
+        away_def_strength = 75 - (log(away_avg_allowed+1) * 5 * 1.2),  # Higher = better defense (fewer points allowed)
         
-        # CORRECTED: Encode spread from HOME TEAM perspective (negative = home favored)
-        # This ensures symmetry - the model learns "negative spread = team wins more often"
+        #Encode spread from HOME TEAM perspective (negative = home favored)
         spread_weighted = case_when(
           is.na(spread_favorite) ~ 0,
           is.na(team_favorite_name) ~ 0,
-          team_home == team_favorite_name ~ -abs(spread_favorite) * 0.5,  # Home favored: negative
-          team_away == team_favorite_name ~ abs(spread_favorite) * 0.5,   # Away favored: positive
+          team_home == team_favorite_name ~ -abs(spread_favorite),  # Home favored: negative
+          team_away == team_favorite_name ~ abs(spread_favorite),   # Away favored: positive
           TRUE ~ 0
         )
       ) %>%
@@ -925,17 +924,17 @@ function(input, output, session) {
     
     # Create prediction data with user inputs using REAL scoring stats
     new_data <- data.frame(
-      spread_weighted = actual_spread * 0.5,
+      spread_weighted = actual_spread * 0.85,
       is_indoor = (input$pred_stadium == "Indoor"),
       schedule_week = input$pred_week,
-      home_strength = home_win_pct,
-      away_strength = away_win_pct,
+      home_strength = home_win_pct * 1.5,
+      away_strength = away_win_pct * 1.4,
       
       # Use actual average points scored/allowed from user input
-      home_off_strength = log(input$pred_home_avg_scored+1) * 5,
-      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 5),
-      away_off_strength = log(input$pred_away_avg_scored+1) * 5,
-      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 5)
+      home_off_strength = log(input$pred_home_avg_scored+1) * 5 * 1.3,
+      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 5 * 1.2),
+      away_off_strength = log(input$pred_away_avg_scored+1) * 5 * 1.3,
+      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 5 * 1.2)
     )
     
     # Get probability from Random Forest
@@ -943,7 +942,7 @@ function(input, output, session) {
     
     # Apply spread-based adjustment to ensure favored teams are heavily favored
     spread_adjustment <- actual_spread*(0.0075)
-    adjusted_prob <- prob + spread_adjustment
+    adjusted_prob <- prob  + spread_adjustment
     
     # Ensure probability stays within reasonable bounds
     adjusted_prob <- max(0.05, min(0.95, adjusted_prob))
@@ -1052,7 +1051,7 @@ function(input, output, session) {
       implied_prob_home <- 0.50 + (spread * -0.045)
     }
     
-    implied_prob_home <- max(0.15, min(0.85, implied_prob_home))
+    implied_prob_home <- max(0.05, min(0.95, implied_prob_home))
     
     # Calculate edge
     edge_home <- (prob_home - implied_prob_home) * 100
@@ -1090,12 +1089,12 @@ function(input, output, session) {
       # No value bet found
       tagList(
         p(icon("info-circle"), strong(" No Value Bet Found"), style = "font-size: 16px; color: #6c757d;"),
-        p("Model prediction does not show positive expected value for either team."),
+        p("Model prediction does not show a predicted value bet compared to Vegas odds."),
         tags$ul(
           tags$li(paste0(input$pred_home_team, " EV: ", ifelse(home_ev > 0, "+", ""), "$", round(home_ev, 2), " per $100 (Edge: ", ifelse(edge_home > 0, "+", ""), round(edge_home, 1), "%)")),
           tags$li(paste0(input$pred_away_team, " EV: ", ifelse(away_ev > 0, "+", ""), "$", round(away_ev, 2), " per $100 (Edge: ", ifelse(edge_away > 0, "+", ""), round(edge_away, 1), "%)"))
         ),
-        p(style = "color: #dc3545; font-weight: bold;", "⚠️ Negative EV means you would lose money over time on these bets.")
+        p(style = "color: #dc3545; font-weight: bold;", "Negative EV means you would lose money over time on these bets. While negative edge means that Vegas predicts that team to win at a higher probability than the model.")
       )
     } else if (home_has_value && (!away_has_value || home_ev > away_ev)) {
       # Home team is the value bet
@@ -1112,8 +1111,8 @@ function(input, output, session) {
           tags$li(paste0("Your Edge: +", round(edge_home, 1), "%"))
         ),
         p(strong(paste0("Expected Value: +$", round(home_ev, 2), " per $100 bet"))),
-        p(ifelse(home_ev > 10, "🔥 Strong value!", ifelse(home_ev > 5, "✅ Good value", "Slight edge")), 
-          style = paste0("color: ", ifelse(home_ev > 10, "#28a745", ifelse(home_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+        p(ifelse(home_ev > 15, "Strong value!", ifelse(home_ev > 5, "Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(home_ev > 15, "#28a745", ifelse(home_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     } else {
       # Away team is the value bet
@@ -1130,8 +1129,8 @@ function(input, output, session) {
           tags$li(paste0("Your Edge: +", round(abs(edge_away), 1), "%"))
         ),
         p(strong(paste0("Expected Value: +$", round(away_ev, 2), " per $100 bet"))),
-        p(ifelse(away_ev > 10, "🔥 Strong value!", ifelse(away_ev > 5, "✅ Good value", "Slight edge")), 
-          style = paste0("color: ", ifelse(away_ev > 10, "#28a745", ifelse(away_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
+        p(ifelse(away_ev > 15, "Strong value!", ifelse(away_ev > 5, "Good value", "Slight edge")), 
+          style = paste0("color: ", ifelse(away_ev > 15, "#28a745", ifelse(away_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     }
   })
@@ -1785,7 +1784,6 @@ function(input, output, session) {
   })
   
   # Bets Table
-  # Bets Table
   output$lib_bets_table <- DT::renderDataTable({
     bets <- all_bets()
     
@@ -1802,7 +1800,6 @@ function(input, output, session) {
       ))
     }
     
-    # Format for display
     # Format for display
     display_bets <- bets %>%
       mutate(

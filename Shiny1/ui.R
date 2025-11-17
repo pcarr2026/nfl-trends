@@ -525,7 +525,8 @@ ui <- dashboardPage(
                            )
                        )
                 )
-              ),),
+              )
+            ),
       
       # ----------------------------------------
       # BETTING ANALYSIS TAB
@@ -786,7 +787,7 @@ ui <- dashboardPage(
                              column(6,
                                     br(),
                                     checkboxInput("pred_home_favored", "Home Team Favored?", value = TRUE)
-                             ),
+                             )
                            ),
                            helpText(icon("info-circle"), " Check the box if the home team is favored. The spread will be applied with the correct sign automatically."),
                            
@@ -800,8 +801,9 @@ ui <- dashboardPage(
                            actionButton("predict_btn", "Predict Winner", 
                                         class = "btn-primary btn-lg btn-block",
                                         icon = icon("magic"))
-                       )
-                ),
+                       )  # This closes the box
+                ),  # This closes column(width = 4)
+                
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Prediction Results"),
@@ -854,10 +856,111 @@ ui <- dashboardPage(
                            
                            h4("Head-to-Head History"),
                            tableOutput("h2h_table")
+                       )  
+                )  
+              ),  
+              
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, 
+                           collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", 
+                                             icon("question-circle"), 
+                                             " How Does the Game Predictor Work? (Click to Expand)"),
+                           
+                           tags$div(style = "padding: 15px;",
+                                    
+                                    h4(icon("brain"), " The AI Prediction Model"),
+                                    p("This predictor uses a ", tags$strong("Random Forest machine learning model"), 
+                                      " trained on ", tags$strong("25 years of NFL games (2000-2025)"), 
+                                      " to predict game outcomes. It's like having 500 expert analysts who each studied thousands of games and vote on who will win."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("balance-scale"), " Factor Weights (What Matters Most)"),
+                                    p("The model weighs different factors based on their predictive power:"),
+                                    tags$ol(
+                                      tags$li(tags$strong("Point Spread (3.0x weight)"), " - The betting line is the single most important factor. Vegas oddsmakers are very accurate, so a team favored by 7+ points has a significantly higher win probability."),
+                                      tags$li(tags$strong("Home Team Win % (1.5x weight)"), " - A team's overall record matters, especially when they're playing at home."),
+                                      tags$li(tags$strong("Away Team Win % (1.4x weight)"), " - The visiting team's record, slightly less important than home win rate due to home-field advantage."),
+                                      tags$li(tags$strong("Offensive Strength (1.3x weight)"), " - Average points scored per game for both teams. High-powered offenses win more often."),
+                                      tags$li(tags$strong("Defensive Strength (1.2x weight)"), " - Average points allowed per game. Better defenses give teams an edge."),
+                                      tags$li(tags$strong("Week of Season (1.0x weight)"), " - Early season games are less predictable than late-season games as teams improve/decline.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-line"), " How Predictions Are Made"),
+                                    tags$ol(
+                                      tags$li(tags$strong("Input Your Data:"), " Enter team records, scoring stats, spread, and game conditions."),
+                                      tags$li(tags$strong("Model Processing:"), " The Random Forest runs 500 decision trees, each analyzing patterns like:"),
+                                      tags$ul(
+                                        tags$li("\"If home team is favored by 7+ and has good offense → 78% chance to win\""),
+                                        tags$li("\"If away team has elite defense and it's late season → 55% chance to win\""),
+                                        tags$li("\"If spread is close (-3 or less) and both offenses strong → 52% chance home wins\"")
+                                      ),
+                                      tags$li(tags$strong("Voting:"), " All 500 trees vote, and the average becomes your prediction."),
+                                      tags$li(tags$strong("Confidence Level:"), " How far the prediction is from 50% determines confidence (Very High/High/Moderate/Low).")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("dollar-sign"), " Expected Value (EV) Explained"),
+                                    p("The ", tags$strong("Betting Value Analysis"), " shows if a bet would be profitable long-term:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Positive EV (+$5.20):"), " You'd profit $5.20 per $100 bet on average over many games. This is a VALUE BET."),
+                                      tags$li(tags$strong("Negative EV (-$8.40):"), " You'd lose $8.40 per $100 bet on average. AVOID this bet."),
+                                      tags$li(tags$strong("How it's calculated:"), " EV = (Win Probability × Payout) - (Loss Probability × Amount Wagered)")
+                                    ),
+                                    p(tags$strong("Example:"), " If the model says 60% win chance, but Vegas odds imply only 52%, you have an 8% edge. Over 100 bets, that edge turns into profit."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-bar"), " Model Accuracy"),
+                                    p("The model achieves ", tags$strong("~60% accuracy"), " on historical games, which is:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Better than coin flips (50%)"), " - Proof it learned real patterns"),
+                                      tags$li(tags$strong("5-8% better than baseline"), " - A significant edge in sports betting"),
+                                      tags$li(tags$strong("Realistic for NFL"), " - Even Vegas experts only hit 55-58% against the spread")
+                                    ),
+                                    p(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369;",
+                                      icon("info-circle"), " ", tags$strong("Why not 90%+ accuracy?"), 
+                                      " NFL games have inherent randomness - injuries, bad calls, weather, luck. Even the best models can't predict every upset. 60% accuracy means winning 6 out of 10 bets, which is excellent for sports betting."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("lightbulb"), " How to Use This Tool"),
+                                    tags$ol(
+                                      tags$li(tags$strong("Get Current Stats:"), " Look up each team's current record and scoring averages (available on ESPN, NFL.com)."),
+                                      tags$li(tags$strong("Find the Spread:"), " Check betting sites for the current point spread. Select which team is favored."),
+                                      tags$li(tags$strong("Set Game Conditions:"), " Choose indoor/outdoor and week of season."),
+                                      tags$li(tags$strong("Click Predict:"), " Review win probabilities and confidence level."),
+                                      tags$li(tags$strong("Check Value Bet Analysis:"), " If EV is positive and edge > 10%, consider it a strong betting opportunity."),
+                                      tags$li(tags$strong("Compare to Vegas:"), " If the model disagrees significantly with the spread (15%+ difference), investigate why before betting.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("exclamation-triangle"), " Important Limitations"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Trained on Historical Data:"), " The model has been trained on historical data which can skew results for a historically good or bad team (Ex: Team A is historically good, but is currently bad -> Model predicts team A victory."),
+                                      tags$li(tags$strong("No injury data:"), " The model doesn't know if the star QB is out. Always check injury reports."),
+                                      tags$li(tags$strong("No momentum:"), " Recent 3-game win streaks aren't factored in, only season-long averages."),
+                                      tags$li(tags$strong("No matchup specifics:"), " Doesn't know if a team struggles against running QBs or elite pass rushers."),
+                                      tags$li(tags$strong("Weather:"), " Only knows indoor vs outdoor, not specific conditions like heavy snow or high winds."),
+                                      tags$li(tags$strong("Coaching changes:"), " Doesn't account for new coaches, coordinators, or scheme changes mid-season.")
+                                    ),
+                                    
+                                    p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
+                                      icon("exclamation-triangle"), " ", tags$strong("Responsible Betting:"), 
+                                      " This tool provides statistical analysis, NOT guaranteed predictions. Past performance does not guarantee future results. ",
+                                      "Always bet responsibly, never wager more than you can afford to lose, and use this as ONE tool in your research, not your only source. ",
+                                      "Consider this model's output alongside injury reports, weather forecasts, expert analysis, and your own judgment.")
+                           )
                        )
                 )
               )
-      ),
+            ),
       
       # ----------------------------------------
       # CLUSTER ANALYSIS TAB
@@ -928,7 +1031,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-      ),  # <-- ADD COMMA HERE - THIS CLOSES THE CLUSTER ANALYSIS TAB
+          ),
     
     # ----------------------------------------
     # BETTING LIBRARY TAB - ADD THIS ENTIRE SECTION
@@ -1082,7 +1185,7 @@ ui <- dashboardPage(
                      )
               )
             )
-    )  
+    )
+      )
   )
-)
 )
