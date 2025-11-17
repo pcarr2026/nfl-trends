@@ -1,9 +1,8 @@
 function(input, output, session) {
   
   # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
-  setupStorage(
-    appId = "nfl_betting_library",
-    inputs = TRUE)
+  # Initialize shinyStore
+  
   # NFL Team Colors
   team_colors <- reactive({
     data.frame(
@@ -1539,6 +1538,37 @@ function(input, output, session) {
       stringsAsFactors = FALSE
     )
   )
+  # Load data from localStorage on startup
+  # Load data from localStorage on startup
+  observe({
+    if (!is.null(input$store$betting_library_data)) {  # ✅ Use input$store consistently
+      stored_data <- input$store$betting_library_data
+      
+      # Convert from list format back to data frame
+      if(length(stored_data) > 0 && !is.null(stored_data[[1]])) {
+        tryCatch({
+          betting_library$bets <- do.call(rbind, lapply(stored_data, function(x) {
+            as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
+          }))
+        }, error = function(e) {
+          message("Error loading stored bets: ", e$message)
+        })
+      }
+    }
+  })
+  
+  # Save data to localStorage whenever it changes
+  observeEvent(betting_library$bets, {
+    # Convert data frame to list format for storage
+    if(nrow(betting_library$bets) > 0) {
+      data_list <- lapply(1:nrow(betting_library$bets), function(i) {
+        as.list(betting_library$bets[i, ])
+      })
+      updateStore(session, "betting_library_data", data_list)
+    } else {
+      updateStore(session, "betting_library_data", list())
+    }
+  }, ignoreInit = TRUE)
   
   # Get all bets
   all_bets <- reactive({
