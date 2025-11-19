@@ -1003,14 +1003,14 @@ ui <- dashboardPage(
                            
                            tags$div(style = "padding: 15px;",
                                     
-                                    h4(icon("brain"), " The AI Prediction Model"),
+                                    h4( " The AI Prediction Model"),
                                     p("This predictor uses a ", tags$strong("Random Forest machine learning model"), 
                                       " trained on ", tags$strong("25 years of NFL games (2000-2025)"), 
                                       " to predict game outcomes. It's like having 500 expert analysts who each studied thousands of games and vote on who will win."),
                                     
                                     hr(),
                                     
-                                    h4(icon("balance-scale"), " Factor Weights (What Matters Most)"),
+                                    h4( " Factor Weights (What Matters Most)"),
                                     p("The model weighs different factors based on their predictive power:"),
                                     tags$ol(
                                       tags$li(tags$strong("Point Spread (3.0x weight)"), " - The betting line is the single most important factor. Vegas oddsmakers are very accurate, so a team favored by 7+ points has a significantly higher win probability."),
@@ -1023,7 +1023,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("chart-line"), " How Predictions Are Made"),
+                                    h4( " How Predictions Are Made"),
                                     tags$ol(
                                       tags$li(tags$strong("Input Your Data:"), " Enter team records, scoring stats, spread, and game conditions."),
                                       tags$li(tags$strong("Model Processing:"), " The Random Forest runs 500 decision trees, each analyzing patterns like:"),
@@ -1038,7 +1038,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("dollar-sign"), " Expected Value (EV) Explained"),
+                                    h4( " Expected Value (EV) Explained"),
                                     p("The ", tags$strong("Betting Value Analysis"), " shows if a bet would be profitable long-term:"),
                                     tags$ul(
                                       tags$li(tags$strong("Positive EV (+$5.20):"), " You'd profit $5.20 per $100 bet on average over many games. This is a VALUE BET."),
@@ -1049,7 +1049,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("chart-bar"), " Model Accuracy"),
+                                    h4( " Model Accuracy"),
                                     p("The model achieves ", tags$strong("~60% accuracy"), " on historical games, which is:"),
                                     tags$ul(
                                       tags$li(tags$strong("Better than coin flips (50%)"), " - Proof it learned real patterns"),
@@ -1062,7 +1062,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("lightbulb"), " How to Use This Tool"),
+                                    h4( " How to Use This Tool"),
                                     tags$ol(
                                       tags$li(tags$strong("Get Current Stats:"), " Look up each team's current record and scoring averages (available on ESPN, NFL.com)."),
                                       tags$li(tags$strong("Find the Spread:"), " Check betting sites for the current point spread. Select which team is favored."),
@@ -1074,7 +1074,7 @@ ui <- dashboardPage(
                                     
                                     hr(),
                                     
-                                    h4(icon("exclamation-triangle"), " Important Limitations"),
+                                    h4( " Important Limitations"),
                                     tags$ul(
                                       tags$li(tags$strong("Trained on Historical Data:"), " The model has been trained on historical data which can skew results for a historically good or bad team (Ex: Team A is historically good, but is currently bad -> Model predicts team A victory."),
                                       tags$li(tags$strong("No injury data:"), " The model doesn't know if the star QB is out. Always check injury reports."),
