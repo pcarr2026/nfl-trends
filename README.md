@@ -1,31 +1,3 @@
 # nfl-trends
-Looking at nfl games and analyzing stats.
-
-
-Aidan Dold
-
-
-
-I actually changed it
-=======
-new change
-
-This is an edit
-
-
-
-
-changed
-
-This is an edit
-Please give me an error
-I'm editing for an error
-
-
-CHANGES
-
-
-
-sdiybt
-
-
+Looking at nfl games from 2000-2025 and analyzing different statistics. 
+Created By: Aidan Dold, Spencer Pringle, Patrick Carr, and Charles Byars
