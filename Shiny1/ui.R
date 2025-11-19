@@ -734,9 +734,142 @@ ui <- dashboardPage(
                                           class = "btn-primary", icon = icon("download"))
                        )
                 )
-              )
+              ),  # <-- This closes the FIRST fluidRow
+              
+              # ✅ EXPLANATION BOX STARTS HERE (still inside tabItem)
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", "Understanding the ROI Calculator (Click to Expand)"),
+                           
+                           tags$div(style = "padding: 15px;",
+                                    
+                                    h4("What This Calculator Does"),
+                                    p("This tool simulates what would have happened if you blindly followed a single betting strategy on ", 
+                                      tags$strong("every game"), " in the dataset from 2000-2025. It calculates your total profit/loss and ROI (Return on Investment) to show which strategies would have been profitable over time."),
+                                    
+                                    hr(),
+                                    
+                                    h4("The Four Strategies Explained"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Always Bet the Favorite:"), " Bet on the team favored to win (negative spread) in every game. You're betting they'll cover the spread."),
+                                      tags$li(tags$strong("Always Bet the Underdog:"), " Bet on the team expected to lose (positive spread) in every game. Underdogs offer higher payouts when they cover."),
+                                      tags$li(tags$strong("Always Take the Over:"), " Bet that the total combined score will be higher than the betting line in every game."),
+                                      tags$li(tags$strong("Always Take the Under:"), " Bet that the total combined score will be lower than the betting line in every game.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4("How Betting Odds Work"),
+                                    p("The calculator uses realistic odds based on the point spread:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Over/Under Bets:"), " Standard -110 odds (risk $110 to win $100). This is the most common betting line."),
+                                      tags$li(tags$strong("Favorite Bets:"), " The bigger the spread, the worse the payout:"),
+                                      tags$ul(
+                                        tags$li("Small favorite (-3 or less): -110 odds"),
+                                        tags$li("Medium favorite (-3 to -7): -150 odds"),
+                                        tags$li("Big favorite (-7 to -10): -200 odds"),
+                                        tags$li("Heavy favorite (-10+): -300 odds")
+                                      ),
+                                      tags$li(tags$strong("Underdog Bets:"), " The bigger the spread, the better the payout:"),
+                                      tags$ul(
+                                        tags$li("Small underdog (+3 or less): +120 odds"),
+                                        tags$li("Medium underdog (+3 to +7): +180 odds"),
+                                        tags$li("Big underdog (+7 to +10): +250 odds"),
+                                        tags$li("Heavy underdog (+10+): +350 odds")
+                                      )
+                                    ),
+                                    
+                                    p(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369;",
+                                      tags$strong("Odds Example:"), 
+                                      " If you bet $100 on a heavy underdog at +350 odds and win, you profit $350 (total return: $450). ",
+                                      "If you bet $100 on a heavy favorite at -300 odds and win, you only profit $33 (total return: $133)."),
+                                    
+                                    hr(),
+                                    
+                                    h4("Understanding ROI"),
+                                    p(tags$strong("ROI (Return on Investment)"), " shows your profit as a percentage of total money wagered:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Positive ROI (+15%):"), " You made a 15% profit. For every $100 wagered, you made $15."),
+                                      tags$li(tags$strong("Negative ROI (-8%):"), " You lost 8%. For every $100 wagered, you lost $8."),
+                                      tags$li(tags$strong("Break-Even (0%):"), " You didn't make or lose money overall.")
+                                    ),
+                                    
+                                    p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
+                                      tags$strong("The 52.4% Rule:"), 
+                                      " Due to the betting commission (\"vig\"), you need to win ", tags$strong("52.4% of your bets at -110 odds"), 
+                                      " just to break even. This is why many strategies show negative ROI even with 50% win rates."),
+                                    
+                                    hr(),
+                                    
+                                    h4("Reading the Cumulative Profit Chart"),
+                                    p("The line chart shows how your bankroll would have changed over time:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Y-Axis:"), " Your total profit/loss in dollars (starts at $0)"),
+                                      tags$li(tags$strong("X-Axis:"), " Game number (chronological order)"),
+                                      tags$li(tags$strong("Green Line:"), " You're currently profitable"),
+                                      tags$li(tags$strong("Red Line:"), " You're currently in the red"),
+                                      tags$li(tags$strong("Slope:"), " Steeper upward = faster profit growth. Steeper downward = faster losses.")
+                                    ),
+                                    
+                                    p("The chart reveals patterns like:", tags$strong(" winning streaks, losing streaks, and long-term trends"), 
+                                      ". A consistently upward-trending line indicates a profitable strategy."),
+                                    
+                                    hr(),
+                                    
+                                    h4("Using the Team Filter"),
+                                    p("Filter by a specific team to see how that strategy performs for games involving that team:"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Favorite Strategy:"), " Shows only games where that team was favored"),
+                                      tags$li(tags$strong("Underdog Strategy:"), " Shows only games where that team was the underdog"),
+                                      tags$li(tags$strong("Over/Under Strategy:"), " Shows only home games at that team's stadium")
+                                    ),
+                                    
+                                    p("This helps identify if certain teams consistently beat expectations. For example, betting on the Patriots as favorites from 2000-2019 might show strong ROI due to their dynasty era."),
+                                    
+                                    hr(),
+                                    
+                                    h4("Team Performance Table"),
+                                    p("The table ranks the top 10 teams by total profit for your selected strategy. This shows which teams were most profitable to bet on using this approach."),
+                                    tags$ul(
+                                      tags$li(tags$strong("Games:"), " Number of games included in the analysis"),
+                                      tags$li(tags$strong("Wins:"), " Number of winning bets"),
+                                      tags$li(tags$strong("Win %:"), " Percentage of bets that won"),
+                                      tags$li(tags$strong("Profit:"), " Total profit/loss in dollars for that team")
+                                    ),
+                                    
+                                    p("A team with 55% win rate and positive profit means betting that strategy for that team's games would have been profitable."),
+                                    
+                                    hr(),
+                                    
+                                    h4("What You Can Learn"),
+                                    tags$ol(
+                                      tags$li(tags$strong("Which strategies work historically:"), " If \"Always Bet the Underdog\" shows +12% ROI, underdogs historically covered more than expected."),
+                                      tags$li(tags$strong("Year range matters:"), " Strategies that worked 2000-2010 might not work 2015-2025. Vegas adapts."),
+                                      tags$li(tags$strong("Team-specific edges:"), " Some teams consistently outperform as favorites/underdogs due to coaching, home-field advantage, or market bias."),
+                                      tags$li(tags$strong("Volatility:"), " A choppy profit chart means high variance - big swings. A smooth upward trend is ideal.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4("Critical Limitations"),
+                                    tags$ul(
+                                      tags$li(tags$strong("Hindsight Bias:"), " This tests strategies on past data. Vegas oddsmakers have adjusted lines based on these same patterns."),
+                                      tags$li(tags$strong("No Guarantees:"), " A strategy that was profitable 2000-2025 may not work going forward. The NFL evolves constantly."),
+                                      tags$li(tags$strong("Ignores Bankroll Management:"), " Flat betting $100 per game assumes unlimited funds. Real betting requires strict bankroll discipline."),
+                                      tags$li(tags$strong("Cherry-Picking Warning:"), " Don't just pick the most profitable team/year range. That's curve-fitting to the past, not predicting the future.")
+                                    ),
+                                    
+                                    p(style = "background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #dc3545;",
+                                      tags$strong("Responsible Gambling:"), 
+                                      " This tool is for educational analysis only. Past performance does not predict future results. ",
+                                      "Sports betting involves significant financial risk. Never wager more than you can afford to lose. ",
+                                      "If you choose to bet, use this as ONE data point among many, not a guaranteed system.")
+                           )
+                       )
+                )
+              ) 
       ),
-      
       # ----------------------------------------
       # GAME PREDICTOR TAB
       # ----------------------------------------
