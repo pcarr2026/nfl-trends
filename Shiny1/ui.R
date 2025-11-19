@@ -1152,7 +1152,7 @@ ui <- dashboardPage(
                              condition = "input.use_pca == true",
                              div(style = "background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 10px;",
                                  p(icon("info-circle"), strong(" PCA Enabled"), style = "margin: 0; color: #013369;"),
-                                 p("Principal components capture the maximum variance in your data. PC1 and PC2 explain the most variation across both factors.", 
+                                 p("Principal components capture the maximum variance in your data. Cluster 1 and cluster 2 explain the most variation across both factors (higher numbers mean more variation from the average team). ", 
                                    style = "margin: 5px 0 0 0; font-size: 13px;")
                              )
                            ),
