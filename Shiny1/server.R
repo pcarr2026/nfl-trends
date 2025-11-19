@@ -1564,13 +1564,12 @@ function(input, output, session) {
   # BETTING LIBRARY STORAGE
   # ========================================
   
-  # Initialize betting library storage FIRST
-  # Initialize betting library storage FIRST
-  betting_library <- reactiveValues(
-    bets = data.frame(
+  # Helper: returns an empty bets data.frame with consistent columns
+  empty_bets_df <- function() {
+    data.frame(
       id = character(),
       date = character(),
-      is_parlay = logical(),
+      is_parlay = logical(),   # <- use underscore, not `is.parlay`
       num_legs = numeric(),
       home_team = character(),
       away_team = character(),
@@ -1583,27 +1582,46 @@ function(input, output, session) {
       notes = character(),
       stringsAsFactors = FALSE
     )
+  }
+  
+  
+  # Initialize betting library storage FIRST
+  # Initialize betting library storage FIRST
+  betting_library <- reactiveValues(
+    bets = empty_bets_df()
   )
   
+  bets_loaded <- reactiveVal(FALSE)
+  
   # Load ALL data from localStorage on startup (PRIORITY = 1)
-  observe({
-    priority = 1  # Run this FIRST before anything else
+  observe(priority = 1, {
+    if (bets_loaded()) return()   # already loaded, don't reload
     
-    # Load betting library
+    # ---- Load betting library ----
     if (!is.null(input$store$betting_library_data)) {
-    stored_bets <- input$store$betting_library_data
-    
-    if(length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
-      tryCatch({
-        betting_library$bets <- do.call(rbind, lapply(stored_bets, function(x) {
-          as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
-        }))
-        message("Loaded ", nrow(betting_library$bets), " bets from storage")
-      }, error = function(e) {
-        message("Error loading stored bets: ", e$message)
-      })
+      stored_bets <- input$store$betting_library_data
+      
+      if (length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
+        tryCatch({
+          betting_library$bets <- do.call(
+            rbind,
+            lapply(stored_bets, function(x) {
+              as.data.frame(
+                lapply(x, function(y) if (is.null(y)) NA else y),
+                stringsAsFactors = FALSE
+              )
+            })
+          )
+          message("Loaded ", nrow(betting_library$bets), " bets from storage")
+        }, error = function(e) {
+          message("Error loading stored bets: ", e$message)
+        })
+      } else {
+        betting_library$bets <- empty_bets_df()
+      }
+    } else {
+      betting_library$bets <- empty_bets_df()
     }
-  }
   
   # Load Stadium Map filters
   if (!is.null(input$store$stadium_metric)) {
@@ -1651,21 +1669,24 @@ function(input, output, session) {
   if (!is.null(input$store$use_pca)) {
     updateCheckboxInput(session, "use_pca", value = input$store$use_pca)
   }
+    bets_loaded(TRUE)
 })
 
-# Save betting library whenever it changes
-observeEvent(betting_library$bets, {
-  if(nrow(betting_library$bets) > 0) {
-    data_list <- lapply(1:nrow(betting_library$bets), function(i) {
-      as.list(betting_library$bets[i, ])
-    })
-    updateStore(session, "betting_library_data", data_list)
-    message("Saved ", nrow(betting_library$bets), " bets to storage")
-  } else {
-    updateStore(session, "betting_library_data", list())
-    message("Cleared storage")
-  }
-}, ignoreInit = TRUE)
+  # Save betting library whenever it changes
+  observeEvent(betting_library$bets, {
+    if (nrow(betting_library$bets) > 0) {
+      data_list <- lapply(1:nrow(betting_library$bets), function(i) {
+        as.list(betting_library$bets[i, ])
+      })
+      updateStore(session, "betting_library_data", data_list)
+      message("Saved ", nrow(betting_library$bets), " bets to storage")
+    } else {
+      # When empty, wipe localStorage too
+      updateStore(session, "betting_library_data", list())
+      message("Cleared storage")
+    }
+  }, ignoreInit = TRUE)
+  
 
 # Save Stadium Map filters
 observeEvent(input$metric, {
@@ -1727,27 +1748,12 @@ observeEvent(input$use_pca, {
   # Create reactive storage (data persists during session only)
   
   # Get all bets
-  all_bets <- reactive({
-    if(nrow(betting_library$bets) == 0) {
-      return(data.frame(
-        id = character(),
-        date = character(),
-        is_parlay = logical(),
-        num_legs = numeric(),
-        home_team = character(),
-        away_team = character(),
-        bet_type = character(),
-        wagered = numeric(),
-        won = numeric(),
-        lost = numeric(),
-        net = numeric(),
-        result = character(),
-        notes = character(),
-        stringsAsFactors = FALSE
-      ))
-    }
-    betting_library$bets %>% arrange(desc(date))
-  })
+all_bets <- reactive({
+  if (nrow(betting_library$bets) == 0) {
+    return(empty_bets_df())
+  }
+  betting_library$bets %>% arrange(desc(date))
+})
   
   # Add new bet
   observeEvent(input$lib_add_bet, {
@@ -1862,22 +1868,8 @@ observeEvent(input$use_pca, {
   })
   
   observeEvent(input$lib_confirm_clear, {
-    betting_library$bets <- data.frame(
-      id = character(),
-      date = character(),
-      is.parlay = logical(),
-      num_legs = numeric(),
-      home_team = character(),
-      away_team = character(),
-      bet_type = character(),
-      wagered = numeric(),
-      won = numeric(),
-      lost = numeric(),
-      net = numeric(),
-      result = character(),
-      notes = character(),
-      stringsAsFactors = FALSE
-    )
+    betting_library$bets <- empty_bets_df()
+    updateStore(session, "betting_library_data", list())
     removeModal()
     showNotification("All bets cleared!", type = "warning")
   })

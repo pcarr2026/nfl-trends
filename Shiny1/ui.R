@@ -1291,9 +1291,6 @@ ui <- dashboardPage(
                                            rows = 4)
                            ),
                            
-                           selectInput("lib_bet_type", "Bet Type:",
-                                       choices = c("Favorite", "Underdog", "Over", "Under")),
-                           
                            numericInput("lib_amount_wagered", "Amount Wagered ($):",
                                         value = 100, min = 1, step = 1),
                            
