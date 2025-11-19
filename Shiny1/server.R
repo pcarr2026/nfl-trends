@@ -1,8 +1,6 @@
 function(input, output, session) {
   
   # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
-  # Initialize shinyStore
-  
   # NFL Team Colors
   team_colors <- reactive({
     data.frame(
@@ -71,8 +69,24 @@ function(input, output, session) {
   # Store favorite team
   favorite_team <- reactiveVal(NULL)
   
+  observe(priority = 1, {
+    # Load favorite team if stored
+    if (!is.null(input$store$favorite_team)) {
+      favorite_team(input$store$favorite_team)
+      
+      # Update the modal dropdown so it matches the stored value
+      updateSelectInput(session, "favorite_team_select",
+                        selected = input$store$favorite_team)
+      
+      # Optionally skip showing the modal entirely if we already know their team
+      removeModal()
+    }
+  })
+  
+  
   observeEvent(input$confirm_team, {
     favorite_team(input$favorite_team_select)
+    updateStore(session, "favorite_team", input$favorite_team_select)
     removeModal()
   })
   
@@ -80,6 +94,8 @@ function(input, output, session) {
     favorite_team("Default")
     removeModal()
   })
+  
+
   
   # Generate dynamic CSS based on favorite team
   output$dynamic_css <- renderUI({
@@ -111,7 +127,7 @@ function(input, output, session) {
       
       /* Sidebar Active Item */
       .sidebar-menu > li.active > a {
-        background: linear-gradient(90deg, ", primary, "33 0%, transparent 100%) !important;
+        background: linear-gradient(90deg, ", primary, "0%, transparent 100%) !important;
         border-left-color: ", primary, " !important;
       }
       
@@ -1540,7 +1556,16 @@ function(input, output, session) {
                  "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
                  "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
                  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")
-  # Create reactive storage (data persists during session only)
+  
+  # ========================================
+# BETTING LIBRARY TAB
+# ========================================
+  # ========================================
+  # BETTING LIBRARY STORAGE
+  # ========================================
+  
+  # Initialize betting library storage FIRST
+  # Initialize betting library storage FIRST
   betting_library <- reactiveValues(
     bets = data.frame(
       id = character(),
@@ -1559,37 +1584,147 @@ function(input, output, session) {
       stringsAsFactors = FALSE
     )
   )
-  # Load data from localStorage on startup
-  # Load data from localStorage on startup
-  observe({
-    if (!is.null(input$store$betting_library_data)) {  # ✅ Use input$store consistently
-      stored_data <- input$store$betting_library_data
-      
-      # Convert from list format back to data frame
-      if(length(stored_data) > 0 && !is.null(stored_data[[1]])) {
-        tryCatch({
-          betting_library$bets <- do.call(rbind, lapply(stored_data, function(x) {
-            as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
-          }))
-        }, error = function(e) {
-          message("Error loading stored bets: ", e$message)
-        })
-      }
-    }
-  })
   
-  # Save data to localStorage whenever it changes
-  observeEvent(betting_library$bets, {
-    # Convert data frame to list format for storage
-    if(nrow(betting_library$bets) > 0) {
-      data_list <- lapply(1:nrow(betting_library$bets), function(i) {
-        as.list(betting_library$bets[i, ])
+  # Load ALL data from localStorage on startup (PRIORITY = 1)
+  observe({
+    priority = 1  # Run this FIRST before anything else
+    
+    # Load betting library
+    if (!is.null(input$store$betting_library_data)) {
+    stored_bets <- input$store$betting_library_data
+    
+    if(length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
+      tryCatch({
+        betting_library$bets <- do.call(rbind, lapply(stored_bets, function(x) {
+          as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
+        }))
+        message("Loaded ", nrow(betting_library$bets), " bets from storage")
+      }, error = function(e) {
+        message("Error loading stored bets: ", e$message)
       })
-      updateStore(session, "betting_library_data", data_list)
-    } else {
-      updateStore(session, "betting_library_data", list())
     }
-  }, ignoreInit = TRUE)
+  }
+  
+  # Load Stadium Map filters
+  if (!is.null(input$store$stadium_metric)) {
+    updateRadioButtons(session, "metric", selected = input$store$stadium_metric)
+  }
+  if (!is.null(input$store$stadium_year_range)) {
+    updateSliderInput(session, "stadium_year_range", value = input$store$stadium_year_range)
+  }
+  if (!is.null(input$store$stadium_select)) {
+    updateSelectInput(session, "stadium_select", selected = input$store$stadium_select)
+  }
+  
+  # Load Betting Analysis filters
+  if (!is.null(input$store$bet_analysis_type)) {
+    updateSelectInput(session, "bet_type", selected = input$store$bet_analysis_type)
+  }
+  if (!is.null(input$store$bet_analysis_factor)) {
+    updateSelectInput(session, "factor", selected = input$store$bet_analysis_factor)
+  }
+  
+  # Load ROI Calculator settings
+  if (!is.null(input$store$roi_strategy)) {
+    updateSelectInput(session, "roi_strategy", selected = input$store$roi_strategy)
+  }
+  if (!is.null(input$store$roi_bet_amount)) {
+    updateSliderInput(session, "roi_bet_amount", value = input$store$roi_bet_amount)
+  }
+  if (!is.null(input$store$roi_year_range)) {
+    updateSliderInput(session, "roi_year_range", value = input$store$roi_year_range)
+  }
+  if (!is.null(input$store$roi_team_filter)) {
+    updateSelectInput(session, "roi_team_filter", selected = input$store$roi_team_filter)
+  }
+  
+  # Load Cluster Analysis settings
+  if (!is.null(input$store$cluster_factor1)) {
+    updateSelectInput(session, "cluster_factor1", selected = input$store$cluster_factor1)
+  }
+  if (!is.null(input$store$cluster_factor2)) {
+    updateSelectInput(session, "cluster_factor2", selected = input$store$cluster_factor2)
+  }
+  if (!is.null(input$store$n_clusters)) {
+    updateSliderInput(session, "n_clusters", value = input$store$n_clusters)
+  }
+  if (!is.null(input$store$use_pca)) {
+    updateCheckboxInput(session, "use_pca", value = input$store$use_pca)
+  }
+})
+
+# Save betting library whenever it changes
+observeEvent(betting_library$bets, {
+  if(nrow(betting_library$bets) > 0) {
+    data_list <- lapply(1:nrow(betting_library$bets), function(i) {
+      as.list(betting_library$bets[i, ])
+    })
+    updateStore(session, "betting_library_data", data_list)
+    message("Saved ", nrow(betting_library$bets), " bets to storage")
+  } else {
+    updateStore(session, "betting_library_data", list())
+    message("Cleared storage")
+  }
+}, ignoreInit = TRUE)
+
+# Save Stadium Map filters
+observeEvent(input$metric, {
+  updateStore(session, "stadium_metric", input$metric)
+}, ignoreInit = TRUE)
+
+observeEvent(input$stadium_year_range, {
+  updateStore(session, "stadium_year_range", input$stadium_year_range)
+}, ignoreInit = TRUE)
+
+observeEvent(input$stadium_select, {
+  updateStore(session, "stadium_select", input$stadium_select)
+}, ignoreInit = TRUE)
+
+# Save Betting Analysis filters
+observeEvent(input$bet_type, {
+  updateStore(session, "bet_analysis_type", input$bet_type)
+}, ignoreInit = TRUE)
+
+observeEvent(input$factor, {
+  updateStore(session, "bet_analysis_factor", input$factor)
+}, ignoreInit = TRUE)
+
+# Save ROI Calculator settings
+observeEvent(input$roi_strategy, {
+  updateStore(session, "roi_strategy", input$roi_strategy)
+}, ignoreInit = TRUE)
+
+observeEvent(input$roi_bet_amount, {
+  updateStore(session, "roi_bet_amount", input$roi_bet_amount)
+}, ignoreInit = TRUE)
+
+observeEvent(input$roi_year_range, {
+  updateStore(session, "roi_year_range", input$roi_year_range)
+}, ignoreInit = TRUE)
+
+observeEvent(input$roi_team_filter, {
+  updateStore(session, "roi_team_filter", input$roi_team_filter)
+}, ignoreInit = TRUE)
+
+# Save Cluster Analysis settings
+observeEvent(input$cluster_factor1, {
+  updateStore(session, "cluster_factor1", input$cluster_factor1)
+}, ignoreInit = TRUE)
+
+observeEvent(input$cluster_factor2, {
+  updateStore(session, "cluster_factor2", input$cluster_factor2)
+}, ignoreInit = TRUE)
+
+observeEvent(input$n_clusters, {
+  updateStore(session, "n_clusters", input$n_clusters)
+}, ignoreInit = TRUE)
+
+observeEvent(input$use_pca, {
+  updateStore(session, "use_pca", input$use_pca)
+}, ignoreInit = TRUE)
+
+# ✅ END OF NEW CODE - Your existing code continues below
+  # Create reactive storage (data persists during session only)
   
   # Get all bets
   all_bets <- reactive({
