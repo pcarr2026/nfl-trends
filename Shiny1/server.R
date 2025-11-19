@@ -55,7 +55,7 @@ function(input, output, session) {
                                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
                                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
                                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-                    selected = "Dallas Cowboys",
+                    selected = "Philadelphia Eagles",
                     width = "100%")
       ),
       footer = tagList(
