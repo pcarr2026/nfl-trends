@@ -95,7 +95,7 @@ function(input, output, session) {
     removeModal()
   })
   
-
+  
   
   # Generate dynamic CSS based on favorite team
   output$dynamic_css <- renderUI({
@@ -1353,16 +1353,6 @@ function(input, output, session) {
       select(all_of(factors)) %>%
       scale()
     
-    # PCA 
-    if(input$use_pca) {
-      pca_result <- prcomp(cluster_matrix)
-      cluster_matrix <- pca_result$x[, 1:2]  # Use first 2 principal components
-      
-      # Update axis labels for PCA
-      cluster_data$x_axis <- cluster_matrix[, 1]
-      cluster_data$y_axis <- cluster_matrix[, 2]
-    }
-    
     # Perform k-means clustering
     set.seed(123)
     kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
@@ -1397,7 +1387,7 @@ function(input, output, session) {
     ))
   })
   
- 
+  
   # Cluster plot
   output$cluster_plot <- renderPlotly({
     results <- cluster_results()
@@ -1424,16 +1414,9 @@ function(input, output, session) {
       "away_win_rate" = "Away Win %"
     )
     
-    # UPDATE LABELS BASED ON PCA
-    if(!is.null(results$use_pca) && results$use_pca) {
-      x_label <- "Principal Component 1"
-      y_label <- "Principal Component 2"
-      title_text <- "Team Clusters (PCA)"
-    } else {
-      x_label <- factor_labels[factors[1]]
-      y_label <- factor_labels[factors[2]]
-      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
-    }
+    x_label <- factor_labels[factors[1]]
+    y_label <- factor_labels[factors[2]]
+    title_text <- paste("Team Clusters by", x_label, "vs", y_label)
     
     # plot_ly Code
     plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
@@ -1558,18 +1541,19 @@ function(input, output, session) {
                  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")
   
   # ========================================
-# BETTING LIBRARY TAB
-# ========================================
+  # BETTING LIBRARY TAB
+  # ========================================
   # ========================================
   # BETTING LIBRARY STORAGE
   # ========================================
   
-  # Helper: returns an empty bets data.frame with consistent columns
-  empty_bets_df <- function() {
-    data.frame(
+  # Initialize betting library storage FIRST
+  # Initialize betting library storage FIRST
+  betting_library <- reactiveValues(
+    bets = data.frame(
       id = character(),
       date = character(),
-      is_parlay = logical(),   # <- use underscore, not `is.parlay`
+      is_parlay = logical(),
       num_legs = numeric(),
       home_team = character(),
       away_team = character(),
@@ -1582,178 +1566,165 @@ function(input, output, session) {
       notes = character(),
       stringsAsFactors = FALSE
     )
-  }
-  
-  
-  # Initialize betting library storage FIRST
-  # Initialize betting library storage FIRST
-  betting_library <- reactiveValues(
-    bets = empty_bets_df()
   )
   
-  bets_loaded <- reactiveVal(FALSE)
-  
   # Load ALL data from localStorage on startup (PRIORITY = 1)
-  observe(priority = 1, {
-    if (bets_loaded()) return()   # already loaded, don't reload
+  observe({
+    priority = 1  # Run this FIRST before anything else
     
-    # ---- Load betting library ----
+    # Load betting library
     if (!is.null(input$store$betting_library_data)) {
       stored_bets <- input$store$betting_library_data
       
-      if (length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
+      if(length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
         tryCatch({
-          betting_library$bets <- do.call(
-            rbind,
-            lapply(stored_bets, function(x) {
-              as.data.frame(
-                lapply(x, function(y) if (is.null(y)) NA else y),
-                stringsAsFactors = FALSE
-              )
-            })
-          )
+          betting_library$bets <- do.call(rbind, lapply(stored_bets, function(x) {
+            as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
+          }))
           message("Loaded ", nrow(betting_library$bets), " bets from storage")
         }, error = function(e) {
           message("Error loading stored bets: ", e$message)
         })
-      } else {
-        betting_library$bets <- empty_bets_df()
       }
-    } else {
-      betting_library$bets <- empty_bets_df()
     }
+    
+    # Load Stadium Map filters
+    if (!is.null(input$store$stadium_metric)) {
+      updateRadioButtons(session, "metric", selected = input$store$stadium_metric)
+    }
+    if (!is.null(input$store$stadium_year_range)) {
+      updateSliderInput(session, "stadium_year_range", value = input$store$stadium_year_range)
+    }
+    if (!is.null(input$store$stadium_select)) {
+      updateSelectInput(session, "stadium_select", selected = input$store$stadium_select)
+    }
+    
+    # Load Betting Analysis filters
+    if (!is.null(input$store$bet_analysis_type)) {
+      updateSelectInput(session, "bet_type", selected = input$store$bet_analysis_type)
+    }
+    if (!is.null(input$store$bet_analysis_factor)) {
+      updateSelectInput(session, "factor", selected = input$store$bet_analysis_factor)
+    }
+    
+    # Load ROI Calculator settings
+    if (!is.null(input$store$roi_strategy)) {
+      updateSelectInput(session, "roi_strategy", selected = input$store$roi_strategy)
+    }
+    if (!is.null(input$store$roi_bet_amount)) {
+      updateSliderInput(session, "roi_bet_amount", value = input$store$roi_bet_amount)
+    }
+    if (!is.null(input$store$roi_year_range)) {
+      updateSliderInput(session, "roi_year_range", value = input$store$roi_year_range)
+    }
+    if (!is.null(input$store$roi_team_filter)) {
+      updateSelectInput(session, "roi_team_filter", selected = input$store$roi_team_filter)
+    }
+    
+    # Load Cluster Analysis settings
+    if (!is.null(input$store$cluster_factor1)) {
+      updateSelectInput(session, "cluster_factor1", selected = input$store$cluster_factor1)
+    }
+    if (!is.null(input$store$cluster_factor2)) {
+      updateSelectInput(session, "cluster_factor2", selected = input$store$cluster_factor2)
+    }
+    if (!is.null(input$store$n_clusters)) {
+      updateSliderInput(session, "n_clusters", value = input$store$n_clusters)
+    }
+  })
   
-  # Load Stadium Map filters
-  if (!is.null(input$store$stadium_metric)) {
-    updateRadioButtons(session, "metric", selected = input$store$stadium_metric)
-  }
-  if (!is.null(input$store$stadium_year_range)) {
-    updateSliderInput(session, "stadium_year_range", value = input$store$stadium_year_range)
-  }
-  if (!is.null(input$store$stadium_select)) {
-    updateSelectInput(session, "stadium_select", selected = input$store$stadium_select)
-  }
-  
-  # Load Betting Analysis filters
-  if (!is.null(input$store$bet_analysis_type)) {
-    updateSelectInput(session, "bet_type", selected = input$store$bet_analysis_type)
-  }
-  if (!is.null(input$store$bet_analysis_factor)) {
-    updateSelectInput(session, "factor", selected = input$store$bet_analysis_factor)
-  }
-  
-  # Load ROI Calculator settings
-  if (!is.null(input$store$roi_strategy)) {
-    updateSelectInput(session, "roi_strategy", selected = input$store$roi_strategy)
-  }
-  if (!is.null(input$store$roi_bet_amount)) {
-    updateSliderInput(session, "roi_bet_amount", value = input$store$roi_bet_amount)
-  }
-  if (!is.null(input$store$roi_year_range)) {
-    updateSliderInput(session, "roi_year_range", value = input$store$roi_year_range)
-  }
-  if (!is.null(input$store$roi_team_filter)) {
-    updateSelectInput(session, "roi_team_filter", selected = input$store$roi_team_filter)
-  }
-  
-  # Load Cluster Analysis settings
-  if (!is.null(input$store$cluster_factor1)) {
-    updateSelectInput(session, "cluster_factor1", selected = input$store$cluster_factor1)
-  }
-  if (!is.null(input$store$cluster_factor2)) {
-    updateSelectInput(session, "cluster_factor2", selected = input$store$cluster_factor2)
-  }
-  if (!is.null(input$store$n_clusters)) {
-    updateSliderInput(session, "n_clusters", value = input$store$n_clusters)
-  }
-  if (!is.null(input$store$use_pca)) {
-    updateCheckboxInput(session, "use_pca", value = input$store$use_pca)
-  }
-    bets_loaded(TRUE)
-})
-
   # Save betting library whenever it changes
   observeEvent(betting_library$bets, {
-    if (nrow(betting_library$bets) > 0) {
+    if(nrow(betting_library$bets) > 0) {
       data_list <- lapply(1:nrow(betting_library$bets), function(i) {
         as.list(betting_library$bets[i, ])
       })
       updateStore(session, "betting_library_data", data_list)
       message("Saved ", nrow(betting_library$bets), " bets to storage")
     } else {
-      # When empty, wipe localStorage too
       updateStore(session, "betting_library_data", list())
       message("Cleared storage")
     }
   }, ignoreInit = TRUE)
   
-
-# Save Stadium Map filters
-observeEvent(input$metric, {
-  updateStore(session, "stadium_metric", input$metric)
-}, ignoreInit = TRUE)
-
-observeEvent(input$stadium_year_range, {
-  updateStore(session, "stadium_year_range", input$stadium_year_range)
-}, ignoreInit = TRUE)
-
-observeEvent(input$stadium_select, {
-  updateStore(session, "stadium_select", input$stadium_select)
-}, ignoreInit = TRUE)
-
-# Save Betting Analysis filters
-observeEvent(input$bet_type, {
-  updateStore(session, "bet_analysis_type", input$bet_type)
-}, ignoreInit = TRUE)
-
-observeEvent(input$factor, {
-  updateStore(session, "bet_analysis_factor", input$factor)
-}, ignoreInit = TRUE)
-
-# Save ROI Calculator settings
-observeEvent(input$roi_strategy, {
-  updateStore(session, "roi_strategy", input$roi_strategy)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_bet_amount, {
-  updateStore(session, "roi_bet_amount", input$roi_bet_amount)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_year_range, {
-  updateStore(session, "roi_year_range", input$roi_year_range)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_team_filter, {
-  updateStore(session, "roi_team_filter", input$roi_team_filter)
-}, ignoreInit = TRUE)
-
-# Save Cluster Analysis settings
-observeEvent(input$cluster_factor1, {
-  updateStore(session, "cluster_factor1", input$cluster_factor1)
-}, ignoreInit = TRUE)
-
-observeEvent(input$cluster_factor2, {
-  updateStore(session, "cluster_factor2", input$cluster_factor2)
-}, ignoreInit = TRUE)
-
-observeEvent(input$n_clusters, {
-  updateStore(session, "n_clusters", input$n_clusters)
-}, ignoreInit = TRUE)
-
-observeEvent(input$use_pca, {
-  updateStore(session, "use_pca", input$use_pca)
-}, ignoreInit = TRUE)
-
-# ✅ END OF NEW CODE - Your existing code continues below
+  # Save Stadium Map filters
+  observeEvent(input$metric, {
+    updateStore(session, "stadium_metric", input$metric)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$stadium_year_range, {
+    updateStore(session, "stadium_year_range", input$stadium_year_range)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$stadium_select, {
+    updateStore(session, "stadium_select", input$stadium_select)
+  }, ignoreInit = TRUE)
+  
+  # Save Betting Analysis filters
+  observeEvent(input$bet_type, {
+    updateStore(session, "bet_analysis_type", input$bet_type)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$factor, {
+    updateStore(session, "bet_analysis_factor", input$factor)
+  }, ignoreInit = TRUE)
+  
+  # Save ROI Calculator settings
+  observeEvent(input$roi_strategy, {
+    updateStore(session, "roi_strategy", input$roi_strategy)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_bet_amount, {
+    updateStore(session, "roi_bet_amount", input$roi_bet_amount)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_year_range, {
+    updateStore(session, "roi_year_range", input$roi_year_range)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_team_filter, {
+    updateStore(session, "roi_team_filter", input$roi_team_filter)
+  }, ignoreInit = TRUE)
+  
+  # Save Cluster Analysis settings
+  observeEvent(input$cluster_factor1, {
+    updateStore(session, "cluster_factor1", input$cluster_factor1)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$cluster_factor2, {
+    updateStore(session, "cluster_factor2", input$cluster_factor2)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$n_clusters, {
+    updateStore(session, "n_clusters", input$n_clusters)
+  }, ignoreInit = TRUE)
+  
+  
+  # ✅ END OF NEW CODE - Your existing code continues below
   # Create reactive storage (data persists during session only)
   
   # Get all bets
-all_bets <- reactive({
-  if (nrow(betting_library$bets) == 0) {
-    return(empty_bets_df())
-  }
-  betting_library$bets %>% arrange(desc(date))
-})
+  all_bets <- reactive({
+    if(nrow(betting_library$bets) == 0) {
+      return(data.frame(
+        id = character(),
+        date = character(),
+        is_parlay = logical(),
+        num_legs = numeric(),
+        home_team = character(),
+        away_team = character(),
+        bet_type = character(),
+        wagered = numeric(),
+        won = numeric(),
+        lost = numeric(),
+        net = numeric(),
+        result = character(),
+        notes = character(),
+        stringsAsFactors = FALSE
+      ))
+    }
+    betting_library$bets %>% arrange(desc(date))
+  })
   
   # Add new bet
   observeEvent(input$lib_add_bet, {
@@ -1868,8 +1839,22 @@ all_bets <- reactive({
   })
   
   observeEvent(input$lib_confirm_clear, {
-    betting_library$bets <- empty_bets_df()
-    updateStore(session, "betting_library_data", list())
+    betting_library$bets <- data.frame(
+      id = character(),
+      date = character(),
+      is.parlay = logical(),
+      num_legs = numeric(),
+      home_team = character(),
+      away_team = character(),
+      bet_type = character(),
+      wagered = numeric(),
+      won = numeric(),
+      lost = numeric(),
+      net = numeric(),
+      result = character(),
+      notes = character(),
+      stringsAsFactors = FALSE
+    )
     removeModal()
     showNotification("All bets cleared!", type = "warning")
   })

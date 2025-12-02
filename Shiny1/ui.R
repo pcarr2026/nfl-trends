@@ -526,7 +526,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-            ),
+      ),
       
       # ----------------------------------------
       # BETTING ANALYSIS TAB
@@ -1093,7 +1093,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-            ),
+      ),
       
       # ----------------------------------------
       # CLUSTER ANALYSIS TAB
@@ -1139,23 +1139,12 @@ ui <- dashboardPage(
                            
                            sliderInput("n_clusters", "Number of Clusters:",
                                        min = 1, max = 4, value = 4, step = 1),
-                           #PCA checkbox
-                           checkboxInput("use_pca", "Use PCA (Principal Component Analysis)", value = FALSE),
                            
                            hr(),
                            
                            h4(icon("info-circle"), " About Clustering:"),
                            p("K-means clustering groups teams with similar characteristics..."),
                            
-                           #PCA conditional panel
-                           conditionalPanel(
-                             condition = "input.use_pca == true",
-                             div(style = "background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 10px;",
-                                 p(icon("info-circle"), strong(" PCA Enabled"), style = "margin: 0; color: #013369;"),
-                                 p("Principal components capture the maximum variance in your data. Cluster 1 and cluster 2 explain the most variation across both factors (higher numbers mean more variation from the average team). ", 
-                                   style = "margin: 5px 0 0 0; font-size: 13px;")
-                             )
-                           ),
                            
                            hr(),
                            
@@ -1181,8 +1170,8 @@ ui <- dashboardPage(
                        )
                 )
               )
-          ),
-    
+      ),
+      
       # ----------------------------------------
       # BETTING LIBRARY TAB - ADD THIS ENTIRE SECTION
       # ----------------------------------------
@@ -1291,6 +1280,9 @@ ui <- dashboardPage(
                                            rows = 4)
                            ),
                            
+                           selectInput("lib_bet_type", "Bet Type:",
+                                       choices = c("Favorite", "Underdog", "Over", "Under")),
+                           
                            numericInput("lib_amount_wagered", "Amount Wagered ($):",
                                         value = 100, min = 1, step = 1),
                            
@@ -1333,7 +1325,6 @@ ui <- dashboardPage(
                 )
               )
       )
-            )
     )
-    )
-  
+  )
+)
