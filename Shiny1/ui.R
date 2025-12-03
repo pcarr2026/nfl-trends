@@ -913,62 +913,272 @@ ui <- dashboardPage(
       # CLUSTER ANALYSIS TAB
       # ----------------------------------------
       tabItem(tabName = "cluster_analysis",
-              h2(icon("project-diagram"), " NFL Team Cluster Analysis"),
+              h2(icon("project-diagram"), " NFL Team Cluster & PCA Analysis"),
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Clustering Configuration"),
-                           selectInput("cluster_factor1", "Factor 1 (X-Axis):",
-                                       choices = list(
-                                         "Win Percentage" = "win_pct",
-                                         "Average Points Scored" = "avg_points_scored",
-                                         "Average Points Allowed" = "avg_points_allowed",
-                                         "Point Differential" = "point_diff",
-                                         "Over Hit Rate" = "over_rate",
-                                         "Under Hit Rate" = "under_rate",
-                                         "Favorite Cover Rate" = "fav_cover_rate",
-                                         "Underdog Cover Rate" = "dog_cover_rate",
-                                         "Home Win Rate" = "home_win_rate",
-                                         "Away Win Rate" = "away_win_rate"
-                                       ),
-                                       selected = "win_pct"),
-                           selectInput("cluster_factor2", "Factor 2 (Y-Axis):",
-                                       choices = list(
-                                         "Win Percentage" = "win_pct",
-                                         "Average Points Scored" = "avg_points_scored",
-                                         "Average Points Allowed" = "avg_points_allowed",
-                                         "Point Differential" = "point_diff",
-                                         "Over Hit Rate" = "over_rate",
-                                         "Under Hit Rate" = "under_rate",
-                                         "Favorite Cover Rate" = "fav_cover_rate",
-                                         "Underdog Cover Rate" = "dog_cover_rate",
-                                         "Home Win Rate" = "home_win_rate",
-                                         "Away Win Rate" = "away_win_rate"
-                                       ),
-                                       selected = "avg_points_scored"),
+                           title = tags$span(style = "color: white;", "Analysis Configuration"),
+                           
+                           radioButtons("analysis_method", "Analysis Method:",
+                                        choices = c("K-Means Clustering" = "kmeans",
+                                                    "PCA (Principal Component Analysis)" = "pca"),
+                                        selected = "kmeans"),
+                           
                            hr(),
-                           sliderInput("n_clusters", "Number of Clusters:",
-                                       min = 1, max = 4, value = 4, step = 1),
+                           
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'kmeans'",
+                             selectInput("cluster_factor1", "Factor 1 (X-Axis):",
+                                         choices = list(
+                                           "Win Percentage" = "win_pct",
+                                           "Average Points Scored" = "avg_points_scored",
+                                           "Average Points Allowed" = "avg_points_allowed",
+                                           "Point Differential" = "point_diff",
+                                           "Over Hit Rate" = "over_rate",
+                                           "Under Hit Rate" = "under_rate",
+                                           "Favorite Cover Rate" = "fav_cover_rate",
+                                           "Underdog Cover Rate" = "dog_cover_rate",
+                                           "Home Win Rate" = "home_win_rate",
+                                           "Away Win Rate" = "away_win_rate"
+                                         ),
+                                         selected = "win_pct"),
+                             selectInput("cluster_factor2", "Factor 2 (Y-Axis):",
+                                         choices = list(
+                                           "Win Percentage" = "win_pct",
+                                           "Average Points Scored" = "avg_points_scored",
+                                           "Average Points Allowed" = "avg_points_allowed",
+                                           "Point Differential" = "point_diff",
+                                           "Over Hit Rate" = "over_rate",
+                                           "Under Hit Rate" = "under_rate",
+                                           "Favorite Cover Rate" = "fav_cover_rate",
+                                           "Underdog Cover Rate" = "dog_cover_rate",
+                                           "Home Win Rate" = "home_win_rate",
+                                           "Away Win Rate" = "away_win_rate"
+                                         ),
+                                         selected = "avg_points_scored"),
+                             hr(),
+                             sliderInput("n_clusters", "Number of Clusters:",
+                                         min = 2, max = 6, value = 4, step = 1)
+                           ),
+                           
                            hr(),
-                           h4(icon("info-circle"), " About Clustering:"),
-                           p("K-means clustering groups teams with similar characteristics together based on the 2 factors you select."),
-                           p("Teams in the same cluster share similar patterns across both metrics."),
-                           p("Use this to identify team archetypes and strategic patterns.")
+                           
+                           h4(icon("info-circle"), " About This Analysis:"),
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'kmeans'",
+                             p("K-means clustering groups teams with similar characteristics together based on the 2 factors you select."),
+                             p("Teams in the same cluster share similar patterns across both metrics.")
+                           ),
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'pca'",
+                             p(strong("PCA"), " reduces all team metrics into 2 principal components that capture the most variance."),
+                             p("Teams close together are similar across ", strong("all"), " metrics, not just two."),
+                             p("The loadings plot shows which variables contribute most to each component.")
+                           )
                        )
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Team Clusters"),
+                           title = tags$span(style = "color: white;", "Analysis Results"),
                            plotlyOutput("cluster_plot", height = "500px"),
+                           
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'pca'",
+                             br(),
+                             h4("PCA Loadings (What Drives Each Component)"),
+                             plotlyOutput("pca_loadings_plot", height = "350px"),
+                             br(),
+                             h4("Variance Explained"),
+                             tableOutput("pca_variance_table")
+                           ),
+                           
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'kmeans'",
+                             br(),
+                             h4("Cluster Characteristics"),
+                             tableOutput("cluster_summary_table")
+                           ),
+                           
                            br(),
-                           h4("Cluster Characteristics"),
-                           tableOutput("cluster_summary_table"),
-                           br(),
-                           h4("Teams by Cluster"),
+                           h4(uiOutput("teams_table_title")),
                            tableOutput("cluster_teams_table"),
                            br(),
-                           downloadButton("download_cluster_data", "Export Cluster Data to CSV", 
+                           downloadButton("download_cluster_data", "Export Data to CSV", 
                                           class = "btn-primary", icon = icon("download"))
+                       )
+                )
+              ),
+              
+              # Explanation Box
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, 
+                           collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", 
+                                             icon("question-circle"), 
+                                             " Understanding PCA & Cluster Analysis (Click to Expand)"),
+                           tags$div(style = "padding: 15px;",
+                                    
+                                    h3(icon("compress-arrows-alt"), " What is PCA (Principal Component Analysis)?"),
+                                    
+                                    h4("The Problem PCA Solves"),
+                                    p("Imagine you have 32 NFL teams and want to compare them. But each team has ", 
+                                      strong("9 different statistics:"), " Win %, Points Scored, Points Allowed, Point Differential, Over Rate, Favorite Cover Rate, Underdog Cover Rate, Home Win Rate, and Away Win Rate."),
+                                    p(strong("How do you visualize 9 dimensions on a 2D screen?"), 
+                                      " You can't plot 9 axes on paper. PCA solves this by compressing all 9 statistics into ", 
+                                      strong("2 'super-statistics'"), " called Principal Components (PC1 and PC2)."),
+                                    
+                                    tags$div(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369; margin: 15px 0;",
+                                             p(style = "margin: 0;", icon("lightbulb"), " ", 
+                                               strong("Simple Analogy:"), " Imagine describing houses with 20 features (square footage, bedrooms, bathrooms, lot size, age, etc.). ",
+                                               "OR you could summarize with just 2 things: ", strong("'Size'"), " and ", strong("'Luxury Level'"), 
+                                               ". These two summaries capture MOST of what matters. PCA does the same thing mathematically with team stats.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-line"), " Understanding PC1 (Principal Component 1)"),
+                                    p("PC1 is the direction that captures the ", strong("most variation"), " between teams. Think of it as the single most important way teams differ from each other."),
+                                    p("In NFL data, PC1 typically represents ", strong("'Overall Team Quality'"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("High PC1 (right side of plot):"), " Good win %, scores lots of points, doesn't allow many points - ", span("excellent teams", style = "color: #28a745; font-weight: bold;")),
+                                      tags$li(strong("Low PC1 (left side of plot):"), " Poor win %, low scoring, gives up lots of points - ", span("struggling teams", style = "color: #dc3545; font-weight: bold;"))
+                                    ),
+                                    p(strong("PC1 answers:"), " 'On a single scale from worst to best, where does each team rank?'"),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-bar"), " Understanding PC2 (Principal Component 2)"),
+                                    p("PC2 captures the ", strong("second biggest source of variation"), " - patterns that PC1 missed."),
+                                    p("In NFL data, PC2 often represents ", strong("'Betting Performance vs Actual Performance'"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("High PC2 (top of plot):"), " Covers spreads often, good betting value - regardless of overall win %"),
+                                      tags$li(strong("Low PC2 (bottom of plot):"), " Doesn't cover spreads, poor betting value - regardless of overall win %")
+                                    ),
+                                    p(strong("PC2 answers:"), " 'Among teams of similar quality, what else differentiates them?'"),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("map-marker-alt"), " Reading the PCA Plot - Position Guide"),
+                                    
+                                    tags$table(style = "width: 100%; border-collapse: collapse; margin: 15px 0;",
+                                               tags$thead(style = "background: #013369; color: white;",
+                                                          tags$tr(
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Position on Plot"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "What It Means"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Example")
+                                                          )
+                                               ),
+                                               tags$tbody(
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Top-Right")),
+                                                         tags$td(style = "padding: 10px;", "Great team + great betting value"),
+                                                         tags$td(style = "padding: 10px;", "Dynasty teams that dominate AND cover spreads")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Bottom-Right")),
+                                                   tags$td(style = "padding: 10px;", "Great team but poor betting value"),
+                                                   tags$td(style = "padding: 10px;", "Heavy favorites that win but don't beat inflated spreads")
+                                                 ),
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Top-Left")),
+                                                         tags$td(style = "padding: 10px;", "Bad team but good betting value"),
+                                                         tags$td(style = "padding: 10px;", "Scrappy underdogs that cover spreads despite losing")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Bottom-Left")),
+                                                   tags$td(style = "padding: 10px;", "Bad team AND bad betting value"),
+                                                   tags$td(style = "padding: 10px;", "Truly terrible teams that lose AND don't cover")
+                                                 ),
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Teams Close Together")),
+                                                         tags$td(style = "padding: 10px;", "Similar across ALL 9 metrics"),
+                                                         tags$td(style = "padding: 10px;", "Comparable team profiles")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Teams Far Apart")),
+                                                   tags$td(style = "padding: 10px;", "Very different team profiles"),
+                                                   tags$td(style = "padding: 10px;", "Opposite ends of the spectrum")
+                                                 )
+                                               )
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("arrows-alt"), " The Loadings Plot - What Drives Each Component?"),
+                                    p("The loadings plot shows ", strong("how much each original statistic contributes"), " to PC1 and PC2."),
+                                    tags$ul(
+                                      tags$li(strong("Variable pointing RIGHT:"), " That stat increases PC1 (team quality)"),
+                                      tags$li(strong("Variable pointing UP:"), " That stat increases PC2 (betting value)"),
+                                      tags$li(strong("Longer arrow:"), " That stat has MORE influence on the components"),
+                                      tags$li(strong("Shorter arrow:"), " That stat has LESS influence")
+                                    ),
+                                    p("Example: If 'Win %' points far right, it heavily influences PC1. If 'Underdog Cover %' points up, it drives PC2."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("percentage"), " Variance Explained - How Good is the Summary?"),
+                                    p("The Variance Explained table shows ", strong("how much information each component captures"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("PC1 = 45%:"), " PC1 alone captures 45% of all differences between teams"),
+                                      tags$li(strong("PC2 = 20%:"), " PC2 captures an additional 20%"),
+                                      tags$li(strong("Combined = 65%:"), " Together, PC1 + PC2 explain 65% of everything")
+                                    ),
+                                    
+                                    tags$div(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 15px 0;",
+                                             p(style = "margin: 0;", icon("info-circle"), " ",
+                                               strong("Is 65% Good?"), " Above 60% means the 2D plot is a reliable summary. 40-60% is decent but some nuance is lost. Below 40% means the plot is missing important differences.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("balance-scale"), " PCA vs K-Means Clustering - When to Use Each"),
+                                    
+                                    tags$table(style = "width: 100%; border-collapse: collapse; margin: 15px 0;",
+                                               tags$thead(style = "background: #013369; color: white;",
+                                                          tags$tr(
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Method"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Best For"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Limitations")
+                                                          )
+                                               ),
+                                               tags$tbody(
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("PCA")),
+                                                         tags$td(style = "padding: 10px;", "Seeing the 'big picture' of how ALL teams compare using ALL 9 stats at once. Finding hidden patterns and similar teams."),
+                                                         tags$td(style = "padding: 10px;", "Components can be harder to interpret than raw stats.")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("K-Means Clustering")),
+                                                   tags$td(style = "padding: 10px;", "Grouping teams into distinct categories based on 2 specific stats you choose. Easy to interpret."),
+                                                   tags$td(style = "padding: 10px;", "Only uses 2 of 9 available stats; ignores the rest.")
+                                                 )
+                                               )
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("futbol"), " Real-World NFL Example"),
+                                    tags$div(style = "background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;",
+                                             p("Let's say we want to find which NFL teams are most similar to the ", strong("Philadelphia Eagles"), 
+                                               " based on ALL their statistics - not just wins, but scoring, betting performance, home/away splits, everything."),
+                                             p("With PCA, we compress all 9 statistics into 2 scores and plot every team. ", 
+                                               strong("The teams closest to the Eagles on the PCA plot are the most similar overall.")),
+                                             p(style = "margin: 0;", "Without PCA, we'd have to make 36 different charts (every pair of 9 statistics) and try to mentally combine them. PCA does that combination mathematically in one view.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("check-circle"), " Key Takeaways"),
+                                    tags$ol(
+                                      tags$li(strong("PCA compresses many statistics into 2 'super-statistics'"), " so we can visualize complex data on a simple 2D plot."),
+                                      tags$li(strong("PC1 is the most important pattern"), " - usually representing overall team quality (good teams right, bad teams left)."),
+                                      tags$li(strong("PC2 is the second most important pattern"), " - often representing betting value or other secondary differences."),
+                                      tags$li(strong("Teams close together on the plot are similar"), " across all original statistics."),
+                                      tags$li(strong("Variance explained tells you how much information is preserved"), " - higher is better (aim for 60%+)."),
+                                      tags$li(strong("The loadings plot shows which stats drive each component"), " - helping you interpret what PC1 and PC2 represent.")
+                                    )
+                           )
                        )
                 )
               )

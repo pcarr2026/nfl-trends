@@ -1166,6 +1166,47 @@ function(input, output, session) {
     return(combined_stats)
   })
   
+  # PCA Analysis
+  pca_results <- reactive({
+    team_data <- cluster_team_data()
+    
+    # Select numeric columns for PCA
+    pca_vars <- c("win_pct", "avg_points_scored", "avg_points_allowed", "point_diff",
+                  "over_rate", "fav_cover_rate", "dog_cover_rate", "home_win_rate", "away_win_rate")
+    
+    # Prepare data - remove rows with NA
+    pca_data <- team_data %>%
+      select(team, all_of(pca_vars)) %>%
+      filter(complete.cases(.))
+    
+    if (nrow(pca_data) < 5) {
+      return(NULL)
+    }
+    
+    # Run PCA
+    pca_matrix <- pca_data %>% select(-team) %>% scale()
+    pca_fit <- prcomp(pca_matrix, center = FALSE, scale. = FALSE)
+    
+    # Get scores
+    scores <- as.data.frame(pca_fit$x)
+    scores$team <- pca_data$team
+    
+    # Get loadings
+    loadings <- as.data.frame(pca_fit$rotation)
+    loadings$variable <- rownames(loadings)
+    
+    # Variance explained
+    var_explained <- summary(pca_fit)$importance[2, ] * 100
+    
+    return(list(
+      scores = scores,
+      loadings = loadings,
+      var_explained = var_explained,
+      pca_fit = pca_fit
+    ))
+  })
+  
+  # K-means clustering results
   cluster_results <- reactive({
     req(input$cluster_factor1, input$cluster_factor2, input$n_clusters)
     
@@ -1223,55 +1264,156 @@ function(input, output, session) {
     ))
   })
   
+  # Main cluster/PCA plot
   output$cluster_plot <- renderPlotly({
-    results <- cluster_results()
+    
+    if (input$analysis_method == "pca") {
+      # PCA Plot
+      results <- pca_results()
+      
+      if (is.null(results)) {
+        return(plot_ly() %>% 
+                 layout(title = "Not enough data for PCA analysis"))
+      }
+      
+      scores <- results$scores
+      var_explained <- results$var_explained
+      
+      plot_ly(scores, x = ~PC1, y = ~PC2,
+              type = 'scatter', mode = 'markers+text',
+              text = ~team,
+              textposition = 'top center',
+              marker = list(size = 12, color = '#1f77b4'),
+              hovertext = ~paste0(
+                "<b>", team, "</b><br>",
+                "PC1: ", round(PC1, 2), "<br>",
+                "PC2: ", round(PC2, 2)
+              ),
+              hoverinfo = 'text') %>%
+        layout(
+          title = paste0("PCA: Teams by Principal Components"),
+          xaxis = list(title = paste0("PC1 (", round(var_explained[1], 1), "% variance)")),
+          yaxis = list(title = paste0("PC2 (", round(var_explained[2], 1), "% variance)")),
+          showlegend = FALSE
+        )
+      
+    } else {
+      # K-means Plot
+      results <- cluster_results()
+      
+      if (is.null(results)) {
+        return(plot_ly() %>% 
+                 layout(title = "Please select 2 different factors or ensure enough data is available"))
+      }
+      
+      data <- results$data
+      factors <- results$factors
+      
+      factor_labels <- c(
+        "win_pct" = "Win %",
+        "avg_points_scored" = "Avg Points Scored",
+        "avg_points_allowed" = "Avg Points Allowed",
+        "point_diff" = "Point Differential",
+        "over_rate" = "Over Hit %",
+        "under_rate" = "Under Hit %",
+        "fav_cover_rate" = "Favorite Cover %",
+        "dog_cover_rate" = "Underdog Cover %",
+        "home_win_rate" = "Home Win %",
+        "away_win_rate" = "Away Win %"
+      )
+      
+      x_label <- factor_labels[factors[1]]
+      y_label <- factor_labels[factors[2]]
+      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
+      
+      plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
+              type = 'scatter', mode = 'markers+text',
+              text = ~team,
+              textposition = 'top center',
+              marker = list(size = 12),
+              hovertext = ~paste0(
+                "<b>", team, "</b><br>",
+                "Cluster: ", cluster, "<br>",
+                x_label, ": ", round(x_axis, 1), "<br>",
+                y_label, ": ", round(y_axis, 1)
+              ),
+              hoverinfo = 'text') %>%
+        layout(
+          title = title_text,
+          xaxis = list(title = x_label),
+          yaxis = list(title = y_label),
+          showlegend = TRUE
+        )
+    }
+  })
+  
+  # PCA Loadings plot
+  output$pca_loadings_plot <- renderPlotly({
+    results <- pca_results()
     
     if (is.null(results)) {
-      return(plot_ly() %>% 
-               layout(title = "Please select 2 different factors or ensure enough data is available"))
+      return(NULL)
     }
     
-    data <- results$data
-    factors <- results$factors
+    loadings <- results$loadings
     
-    factor_labels <- c(
+    # Pretty labels
+    var_labels <- c(
       "win_pct" = "Win %",
-      "avg_points_scored" = "Avg Points Scored",
-      "avg_points_allowed" = "Avg Points Allowed",
-      "point_diff" = "Point Differential",
-      "over_rate" = "Over Hit %",
-      "under_rate" = "Under Hit %",
-      "fav_cover_rate" = "Favorite Cover %",
-      "dog_cover_rate" = "Underdog Cover %",
+      "avg_points_scored" = "Avg Pts Scored",
+      "avg_points_allowed" = "Avg Pts Allowed",
+      "point_diff" = "Point Diff",
+      "over_rate" = "Over Rate",
+      "fav_cover_rate" = "Fav Cover %",
+      "dog_cover_rate" = "Dog Cover %",
       "home_win_rate" = "Home Win %",
       "away_win_rate" = "Away Win %"
     )
     
-    x_label <- factor_labels[factors[1]]
-    y_label <- factor_labels[factors[2]]
-    title_text <- paste("Team Clusters by", x_label, "vs", y_label)
+    loadings$label <- var_labels[loadings$variable]
     
-    plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
+    plot_ly(loadings, x = ~PC1, y = ~PC2,
             type = 'scatter', mode = 'markers+text',
-            text = ~team,
+            text = ~label,
             textposition = 'top center',
-            marker = list(size = 12),
+            marker = list(size = 10, color = '#d62728'),
             hovertext = ~paste0(
-              "<b>", team, "</b><br>",
-              "Cluster: ", cluster, "<br>",
-              x_label, ": ", round(x_axis, 1), "<br>",
-              y_label, ": ", round(y_axis, 1)
+              "<b>", label, "</b><br>",
+              "PC1 Loading: ", round(PC1, 3), "<br>",
+              "PC2 Loading: ", round(PC2, 3)
             ),
             hoverinfo = 'text') %>%
       layout(
-        title = title_text,
-        xaxis = list(title = x_label),
-        yaxis = list(title = y_label),
-        showlegend = TRUE
+        title = "PCA Loadings (Variable Contributions)",
+        xaxis = list(title = "PC1 Loading", zeroline = TRUE),
+        yaxis = list(title = "PC2 Loading", zeroline = TRUE),
+        showlegend = FALSE
       )
   })
   
+  # Variance explained table
+  output$pca_variance_table <- renderTable({
+    results <- pca_results()
+    
+    if (is.null(results)) {
+      return(data.frame(Message = "Not enough data for PCA"))
+    }
+    
+    var_exp <- results$var_explained
+    
+    data.frame(
+      Component = paste0("PC", 1:min(5, length(var_exp))),
+      `Variance Explained` = paste0(round(var_exp[1:min(5, length(var_exp))], 1), "%"),
+      `Cumulative` = paste0(round(cumsum(var_exp)[1:min(5, length(var_exp))], 1), "%"),
+      check.names = FALSE
+    )
+  })
+  
   output$cluster_summary_table <- renderTable({
+    if (input$analysis_method == "pca") {
+      return(NULL)
+    }
+    
     results <- cluster_results()
     
     if (is.null(results)) {
@@ -1296,6 +1438,27 @@ function(input, output, session) {
   })
   
   output$cluster_teams_table <- renderTable({
+    if (input$analysis_method == "pca") {
+      # For PCA, show teams sorted by PC1
+      results <- pca_results()
+      
+      if (is.null(results)) {
+        return(data.frame(Message = "Not enough data for PCA"))
+      }
+      
+      scores <- results$scores %>%
+        arrange(desc(PC1)) %>%
+        mutate(
+          PC1 = round(PC1, 2),
+          PC2 = round(PC2, 2)
+        ) %>%
+        select(team, PC1, PC2)
+      
+      names(scores) <- c("Team", "PC1 Score", "PC2 Score")
+      
+      return(scores)
+    }
+    
     results <- cluster_results()
     
     if (is.null(results)) {
@@ -1315,6 +1478,15 @@ function(input, output, session) {
     names(teams_by_cluster)[1] <- "Cluster"
     
     return(teams_by_cluster)
+  })
+  
+  # Dynamic title for teams table
+  output$teams_table_title <- renderUI({
+    if (input$analysis_method == "pca") {
+      "Team PCA Scores"
+    } else {
+      "Teams by Cluster"
+    }
   })
   
   # Navigate to stadium map
