@@ -241,7 +241,7 @@ function(input, output, session) {
   
   # ========== LOAD AND PROCESS DATA ==========
   nfl_data <- reactive({
-    df <- read.csv("../cleaned_nfl_data.csv")
+    df <- read.csv("cleaned_nfl_data.csv")
     
     df <- df %>%
       mutate(
@@ -594,7 +594,7 @@ function(input, output, session) {
   })
   
   stadium_coords <- reactive({
-    read.csv("../nfl_stadiums_coordinates.csv", stringsAsFactors = FALSE)
+    read.csv("nfl_stadiums_coordinates.csv", stringsAsFactors = FALSE)
   })
   
   stadium_data <- reactive({
