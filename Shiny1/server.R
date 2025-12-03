@@ -55,37 +55,46 @@ function(input, output, session) {
     }
   }, once = TRUE, ignoreNULL = FALSE)
   
-  # Show modal once on startup (always shows, pre-selects stored team if available)
+  # Show modal once on startup - use invalidateLater to ensure session is ready
   observe({
-    if (!modal_shown()) {
-      modal_shown(TRUE)
-      
-      stored_team <- isolate(favorite_team())
-      
-      showModal(modalDialog(
-        title = tags$div(
-          style = "text-align: center;",
-          icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
-          h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
-        ),
-        tags$div(
-          style = "text-align: center; padding: 20px;",
-          h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
-          p("The dashboard will personalize to your team's colors!"),
-          selectInput("favorite_team_select", NULL,
-                      choices = nfl_teams,
-                      selected = if (!is.null(stored_team) && stored_team != "Default") stored_team else "Philadelphia Eagles",
-                      width = "100%")
-        ),
-        footer = tagList(
-          actionButton("skip_team", "Skip", class = "btn-default"),
-          actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
-                       icon = icon("check"))
-        ),
-        size = "m",
-        easyClose = FALSE
-      ))
-    }
+    # Only run once
+    if (modal_shown()) return()
+    
+    # Small delay to let session initialize
+    invalidateLater(100, session)
+    
+    # Check if this is the first real run (after the delay)
+    isolate({
+      if (!modal_shown()) {
+        modal_shown(TRUE)
+        
+        stored_team <- favorite_team()
+        
+        showModal(modalDialog(
+          title = tags$div(
+            style = "text-align: center;",
+            icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
+            h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
+          ),
+          tags$div(
+            style = "text-align: center; padding: 20px;",
+            h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
+            p("The dashboard will personalize to your team's colors!"),
+            selectInput("favorite_team_select", NULL,
+                        choices = nfl_teams,
+                        selected = if (!is.null(stored_team) && stored_team != "Default") stored_team else "Philadelphia Eagles",
+                        width = "100%")
+          ),
+          footer = tagList(
+            actionButton("skip_team", "Skip", class = "btn-default"),
+            actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
+                         icon = icon("check"))
+          ),
+          size = "m",
+          easyClose = FALSE
+        ))
+      }
+    })
   })
   
   observeEvent(input$confirm_team, {
@@ -797,7 +806,6 @@ function(input, output, session) {
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
-    library(randomForest)
     model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
                             home_strength + away_strength + 
                             home_off_strength + home_def_strength + 
