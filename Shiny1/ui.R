@@ -7,6 +7,20 @@ library(tidyverse)
 library(plotly)
 library(htmltools)
 library(shinyStore)
+library(DT)
+library(randomForest)
+
+# NFL Teams list (shared across UI)
+nfl_teams <- c(
+  "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+  "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+  "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+  "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+  "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+  "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+  "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+  "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"
+)
 
 ui <- dashboardPage(
   skin = "blue",
@@ -34,6 +48,7 @@ ui <- dashboardPage(
   
   dashboardBody(
     initStore("store", "nfl_analytics_store"),
+    
     # Custom CSS for modern styling
     tags$head(
       tags$style(HTML("
@@ -393,14 +408,12 @@ ui <- dashboardPage(
       "))
     ),
     
-    # ADD THIS LINE - Dynamic CSS based on favorite team
+    # Dynamic CSS based on favorite team
     uiOutput("dynamic_css"),
-    
-    # ... rest of your tabs
     
     tabItems(
       # ----------------------------------------
-      # HOME TAB - Enhanced Design
+      # HOME TAB
       # ----------------------------------------
       tabItem(tabName = "home",
               fluidRow(
@@ -481,35 +494,25 @@ ui <- dashboardPage(
               fluidRow(
                 column(width = 12,
                        box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
-                           title = tags$span(style = "color: white;"," How to Read the Stadium Map (Click to Expand)"),                           
+                           title = tags$span(style = "color: white;", " How to Read the Stadium Map (Click to Expand)"),
                            tags$div(style = "padding: 10px;",
-                                    
                                     h4(" What Are Overs and Unders?"),
                                     p(strong("Over/Under Betting"), "is a wager on the total combined points scored by both teams in a game."),
                                     tags$ul(
-                                      tags$li(strong("Over:"), "The bet wins if the total points scored ", 
-                                              tags$em("exceeds"), "the betting line set by oddsmakers."),
-                                      tags$li(strong("Under:"), "The bet wins if the total points scored ", 
-                                              tags$em("falls below"), "the betting line.")
+                                      tags$li(strong("Over:"), "The bet wins if the total points scored ", tags$em("exceeds"), "the betting line set by oddsmakers."),
+                                      tags$li(strong("Under:"), "The bet wins if the total points scored ", tags$em("falls below"), "the betting line.")
                                     ),
                                     p(tags$strong("Example:"), "If the over/under line is 47.5 points, and the final score is 28-24 (52 total), the ", 
                                       tags$span(style="color: #28a745; font-weight: bold;", "Over"), " wins."),
-                                    
                                     hr(),
-                                    
                                     h4(" How to Read This Map"),
                                     tags$ul(
-                                      tags$li(tags$strong("Multiple Circles:"), "Each circle represents one NFL stadium. The size of the circle is proportional to the ", 
-                                              tags$em("number"), " of Overs or Unders that hit at that venue."),
-                                      tags$li(tags$strong("Circle Colors:"), "The gradient (blue to red) shows the ", 
-                                              tags$em("count"), " of that outcome relative to other stadiums. Darker red = more Overs/Unders."),
+                                      tags$li(tags$strong("Multiple Circles:"), "Each circle represents one NFL stadium. The size of the circle is proportional to the ", tags$em("number"), " of Overs or Unders that hit at that venue."),
+                                      tags$li(tags$strong("Circle Colors:"), "The gradient (blue to red) shows the ", tags$em("count"), " of that outcome relative to other stadiums. Darker red = more Overs/Unders."),
                                       tags$li(tags$strong("Click for Details:"), "Click any stadium marker to see the exact count, percentage, and a photo of the venue."),
-                                      tags$li(tags$strong("Percentage Matters:"), "A stadium with 60% Overs means that historically, games there tend to be ", 
-                                              tags$em("higher-scoring"), " than the betting line suggests.")
+                                      tags$li(tags$strong("Percentage Matters:"), "A stadium with 60% Overs means that historically, games there tend to be ", tags$em("higher-scoring"), " than the betting line suggests.")
                                     ),
-                                    
                                     hr(),
-                                    
                                     h4(" Why This Matters for Bettors"),
                                     p("Certain stadiums consistently favor overs or unders due to factors like:"),
                                     tags$ul(
@@ -526,7 +529,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-            ),
+      ),
       
       # ----------------------------------------
       # BETTING ANALYSIS TAB
@@ -541,15 +544,12 @@ ui <- dashboardPage(
                                        choices = list("Favorite Covered" = "fav_correct",
                                                       "Over Hit" = "over_hit",
                                                       "Under Hit" = "under_hit")),
-                           
                            selectInput("factor", "Factor:",
                                        choices = list("Season Type" = "season_type",
                                                       "Stadium Type" = "stadium_type",
                                                       "Temperature" = "temp_category",
                                                       "Home Team" = "team_home")),
-                           
                            hr(),
-                           
                            h4(icon("lightbulb"), " Graph Explanation:"),
                            uiOutput("explanation_text")
                        )
@@ -566,13 +566,11 @@ ui <- dashboardPage(
                        )
                 )
               ),
-              
               fluidRow(
                 column(width = 12,
                        box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
-                           title = tags$span(style = "color: white;", "Understanding Betting Analysis (Click to Expand)"),                           
+                           title = tags$span(style = "color: white;", "Understanding Betting Analysis (Click to Expand)"),
                            tags$div(style = "padding: 10px;",
-                                    
                                     h4(" What is Spread Betting?"),
                                     p(strong("The Point Spread"), "is the predicted margin of victory set by oddsmakers. When you bet on the favorite, they must win by ", 
                                       tags$em("more"), " than the spread. When you bet on the underdog, they must either win outright ", 
@@ -584,9 +582,7 @@ ui <- dashboardPage(
                                     ),
                                     p(tags$strong("Example:"), "If the Patriots are favored by -3.5 over the Dolphins and win 24-17 (7-point margin), the Patriots ", 
                                       tags$span(style="color: #28a745; font-weight: bold;", "covered"), " because 7 > 3.5."),
-                                    
                                     hr(),
-                                    
                                     h4(" What Does This Analysis Show?"),
                                     p("This tool reveals ", tags$strong("situational betting patterns"), " by breaking down historical performance across different factors:"),
                                     tags$ul(
@@ -595,9 +591,7 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Temperature:"), "Cold weather games often favor defenses and underdogs. Teams struggle to score in sub-freezing conditions."),
                                       tags$li(tags$strong("Home Team:"), "Which teams consistently beat the spread when playing at home? Some franchises have strong home-field advantages.")
                                     ),
-                                    
                                     hr(),
-                                    
                                     h4(" Understanding the 50% Red Line"),
                                     p("The ", tags$span(style="color: red; font-weight: bold;", "red dashed line at 50%"), " represents ", 
                                       tags$strong("break-even performance"), ". Here's why it matters:"),
@@ -613,9 +607,7 @@ ui <- dashboardPage(
                                       icon("calculator"), " ", tags$strong("Math Behind It:"), 
                                       " To profit at standard -110 odds (bet $110 to win $100), you need a 52.4% win rate. ",
                                       "Any factor showing 54%+ success over 100+ games represents a potential edge."),
-                                    
                                     hr(),
-                                    
                                     h4(" How to Use the Filters"),
                                     tags$ol(
                                       tags$li(tags$strong("Select 'What to Analyze':"), 
@@ -628,9 +620,7 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Analyze the Results:"), "Look for bars significantly above or below 50%"),
                                       tags$li(tags$strong("Check Sample Size:"), "Hover over bars to see game counts - patterns with 50+ games are more reliable")
                                     ),
-                                    
                                     hr(),
-                                    
                                     h4(" Real-World Betting Applications"),
                                     tags$ul(
                                       tags$li(tags$strong("Identify Situational Edges:"), "If Week 1 shows favorites only cover 42% of the time, consider betting underdogs in season openers."),
@@ -638,7 +628,6 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Home Field Advantage:"), "Some teams (Seattle, Kansas City) consistently cover at home due to crowd noise and altitude/weather factors."),
                                       tags$li(tags$strong("Playoff Trends:"), "Playoff games often trend differently than regular season - tighter defenses, lower scoring.")
                                     ),
-                                    
                                     p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
                                       icon("exclamation-triangle"), " ", tags$strong("Important Disclaimer:"), 
                                       " Past performance does not guarantee future results. Vegas oddsmakers adjust lines based on these same factors. ",
@@ -659,7 +648,6 @@ ui <- dashboardPage(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Strategy Configuration"),
-                           
                            selectInput("roi_strategy", "Select Strategy:",
                                        choices = list(
                                          "Always Bet the Favorite" = "favorite",
@@ -667,20 +655,15 @@ ui <- dashboardPage(
                                          "Always Take the Over" = "over",
                                          "Always Take the Under" = "under"
                                        )),
-                           
                            sliderInput("roi_bet_amount", "Bet Amount per Game:",
                                        min = 10, max = 500, value = 100, step = 10,
                                        pre = "$"),
-                           
                            sliderInput("roi_year_range", "Year Range:",
                                        min = 2000, max = 2025, value = c(2000, 2025),
                                        step = 1, sep = ""),
-                           
                            selectInput("roi_team_filter", "Filter by Team:",
                                        choices = c("All Teams" = "all")),
-                           
                            hr(),
-                           
                            h4(icon("info-circle"), " How It Works:"),
                            p("This calculator shows what would have happened if you used this strategy on every game in the dataset."),
                            p(strong("Betting Odds:")),
@@ -693,7 +676,6 @@ ui <- dashboardPage(
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Strategy Results"),
-                           
                            fluidRow(
                              column(3, 
                                     div(class = "metric-card",
@@ -720,13 +702,9 @@ ui <- dashboardPage(
                                     )
                              )
                            ),
-                           
                            br(),
-                           
                            plotlyOutput("roi_plot", height = "400px"),
-                           
                            br(),
-                           
                            h4("Team Performance for This Strategy"),
                            tableOutput("roi_team_table"),
                            br(),
@@ -734,22 +712,16 @@ ui <- dashboardPage(
                                           class = "btn-primary", icon = icon("download"))
                        )
                 )
-              ),  # <-- This closes the FIRST fluidRow
-              
-              # ✅ EXPLANATION BOX STARTS HERE (still inside tabItem)
+              ),
               fluidRow(
                 column(width = 12,
                        box(width = NULL, status = "info", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
                            title = tags$span(style = "color: white;", "Understanding the ROI Calculator (Click to Expand)"),
-                           
                            tags$div(style = "padding: 15px;",
-                                    
                                     h4("What This Calculator Does"),
                                     p("This tool simulates what would have happened if you blindly followed a single betting strategy on ", 
                                       tags$strong("every game"), " in the dataset from 2000-2025. It calculates your total profit/loss and ROI (Return on Investment) to show which strategies would have been profitable over time."),
-                                    
                                     hr(),
-                                    
                                     h4("The Four Strategies Explained"),
                                     tags$ul(
                                       tags$li(tags$strong("Always Bet the Favorite:"), " Bet on the team favored to win (negative spread) in every game. You're betting they'll cover the spread."),
@@ -757,9 +729,7 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Always Take the Over:"), " Bet that the total combined score will be higher than the betting line in every game."),
                                       tags$li(tags$strong("Always Take the Under:"), " Bet that the total combined score will be lower than the betting line in every game.")
                                     ),
-                                    
                                     hr(),
-                                    
                                     h4("How Betting Odds Work"),
                                     p("The calculator uses realistic odds based on the point spread:"),
                                     tags$ul(
@@ -779,14 +749,11 @@ ui <- dashboardPage(
                                         tags$li("Heavy underdog (+10+): +350 odds")
                                       )
                                     ),
-                                    
                                     p(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369;",
                                       tags$strong("Odds Example:"), 
                                       " If you bet $100 on a heavy underdog at +350 odds and win, you profit $350 (total return: $450). ",
                                       "If you bet $100 on a heavy favorite at -300 odds and win, you only profit $33 (total return: $133)."),
-                                    
                                     hr(),
-                                    
                                     h4("Understanding ROI"),
                                     p(tags$strong("ROI (Return on Investment)"), " shows your profit as a percentage of total money wagered:"),
                                     tags$ul(
@@ -794,72 +761,11 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Negative ROI (-8%):"), " You lost 8%. For every $100 wagered, you lost $8."),
                                       tags$li(tags$strong("Break-Even (0%):"), " You didn't make or lose money overall.")
                                     ),
-                                    
                                     p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
                                       tags$strong("The 52.4% Rule:"), 
                                       " Due to the betting commission (\"vig\"), you need to win ", tags$strong("52.4% of your bets at -110 odds"), 
                                       " just to break even. This is why many strategies show negative ROI even with 50% win rates."),
-                                    
                                     hr(),
-                                    
-                                    h4("Reading the Cumulative Profit Chart"),
-                                    p("The line chart shows how your bankroll would have changed over time:"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Y-Axis:"), " Your total profit/loss in dollars (starts at $0)"),
-                                      tags$li(tags$strong("X-Axis:"), " Game number (chronological order)"),
-                                      tags$li(tags$strong("Green Line:"), " You're currently profitable"),
-                                      tags$li(tags$strong("Red Line:"), " You're currently in the red"),
-                                      tags$li(tags$strong("Slope:"), " Steeper upward = faster profit growth. Steeper downward = faster losses.")
-                                    ),
-                                    
-                                    p("The chart reveals patterns like:", tags$strong(" winning streaks, losing streaks, and long-term trends"), 
-                                      ". A consistently upward-trending line indicates a profitable strategy."),
-                                    
-                                    hr(),
-                                    
-                                    h4("Using the Team Filter"),
-                                    p("Filter by a specific team to see how that strategy performs for games involving that team:"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Favorite Strategy:"), " Shows only games where that team was favored"),
-                                      tags$li(tags$strong("Underdog Strategy:"), " Shows only games where that team was the underdog"),
-                                      tags$li(tags$strong("Over/Under Strategy:"), " Shows only home games at that team's stadium")
-                                    ),
-                                    
-                                    p("This helps identify if certain teams consistently beat expectations. For example, betting on the Patriots as favorites from 2000-2019 might show strong ROI due to their dynasty era."),
-                                    
-                                    hr(),
-                                    
-                                    h4("Team Performance Table"),
-                                    p("The table ranks the top 10 teams by total profit for your selected strategy. This shows which teams were most profitable to bet on using this approach."),
-                                    tags$ul(
-                                      tags$li(tags$strong("Games:"), " Number of games included in the analysis"),
-                                      tags$li(tags$strong("Wins:"), " Number of winning bets"),
-                                      tags$li(tags$strong("Win %:"), " Percentage of bets that won"),
-                                      tags$li(tags$strong("Profit:"), " Total profit/loss in dollars for that team")
-                                    ),
-                                    
-                                    p("A team with 55% win rate and positive profit means betting that strategy for that team's games would have been profitable."),
-                                    
-                                    hr(),
-                                    
-                                    h4("What You Can Learn"),
-                                    tags$ol(
-                                      tags$li(tags$strong("Which strategies work historically:"), " If \"Always Bet the Underdog\" shows +12% ROI, underdogs historically covered more than expected."),
-                                      tags$li(tags$strong("Year range matters:"), " Strategies that worked 2000-2010 might not work 2015-2025. Vegas adapts."),
-                                      tags$li(tags$strong("Team-specific edges:"), " Some teams consistently outperform as favorites/underdogs due to coaching, home-field advantage, or market bias."),
-                                      tags$li(tags$strong("Volatility:"), " A choppy profit chart means high variance - big swings. A smooth upward trend is ideal.")
-                                    ),
-                                    
-                                    hr(),
-                                    
-                                    h4("Critical Limitations"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Hindsight Bias:"), " This tests strategies on past data. Vegas oddsmakers have adjusted lines based on these same patterns."),
-                                      tags$li(tags$strong("No Guarantees:"), " A strategy that was profitable 2000-2025 may not work going forward. The NFL evolves constantly."),
-                                      tags$li(tags$strong("Ignores Bankroll Management:"), " Flat betting $100 per game assumes unlimited funds. Real betting requires strict bankroll discipline."),
-                                      tags$li(tags$strong("Cherry-Picking Warning:"), " Don't just pick the most profitable team/year range. That's curve-fitting to the past, not predicting the future.")
-                                    ),
-                                    
                                     p(style = "background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #dc3545;",
                                       tags$strong("Responsible Gambling:"), 
                                       " This tool is for educational analysis only. Past performance does not predict future results. ",
@@ -868,8 +774,9 @@ ui <- dashboardPage(
                            )
                        )
                 )
-              ) 
+              )
       ),
+      
       # ----------------------------------------
       # GAME PREDICTOR TAB
       # ----------------------------------------
@@ -879,39 +786,29 @@ ui <- dashboardPage(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Game Setup"),
-                           
                            h4(icon("home"), " Home Team"),
                            selectInput("pred_home_team", NULL, choices = NULL),
-                           
                            fluidRow(
                              column(6, numericInput("pred_home_wins", "Wins:", value = 8, min = 0, max = 17, step = 1)),
                              column(6, numericInput("pred_home_losses", "Losses:", value = 5, min = 0, max = 17, step = 1))
                            ),
-                           
                            fluidRow(
                              column(6, numericInput("pred_home_avg_scored", "Avg Points Scored:", value = 24, min = 0, max = 100, step = 0.1)),
                              column(6, numericInput("pred_home_avg_allowed", "Avg Points Allowed:", value = 22, min = 0, max = 100, step = 0.1))
                            ),
-                           
                            hr(),
-                           
                            h4(icon("plane"), " Away Team"),
                            selectInput("pred_away_team", NULL, choices = NULL),
-                           
                            fluidRow(
                              column(6, numericInput("pred_away_wins", "Wins:", value = 7, min = 0, max = 17, step = 1)),
                              column(6, numericInput("pred_away_losses", "Losses:", value = 6, min = 0, max = 17, step = 1))
                            ),
-                           
                            fluidRow(
                              column(6, numericInput("pred_away_avg_scored", "Avg Points Scored:", value = 22, min = 0, max = 100, step = 0.1)),
                              column(6, numericInput("pred_away_avg_allowed", "Avg Points Allowed:", value = 24, min = 0, max = 100, step = 0.1))
                            ),
-                           
                            hr(),
-                           
                            h4(icon("cog"), " Game Conditions"),
-                           
                            fluidRow(
                              column(6,
                                     numericInput("pred_spread", "Spread (points):",
@@ -923,35 +820,26 @@ ui <- dashboardPage(
                              )
                            ),
                            helpText(icon("info-circle"), " Check the box if the home team is favored. The spread will be applied with the correct sign automatically."),
-                           
                            selectInput("pred_stadium", "Stadium Type:",
                                        choices = c("Outdoor", "Indoor"),
                                        selected = "Outdoor"),
-                           
                            sliderInput("pred_week", "Week of Season:",
                                        min = 1, max = 18, value = 9, step = 1),
-                           
                            actionButton("predict_btn", "Predict Winner", 
                                         class = "btn-primary btn-lg btn-block",
                                         icon = icon("magic"))
-                       )  # This closes the box
-                ),  # This closes column(width = 4)
-                
+                       )
+                ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Prediction Results"),
-                           
                            uiOutput("prediction_result"),
-                           
                            br(),
-                           
                            div(class = "value-bet-box",
                                h4(icon("dollar-sign"), " Betting Value Analysis"),
                                uiOutput("value_bet_analysis")
                            ),
-                           
                            br(),
-                           
                            h4("Model Performance"),
                            fluidRow(
                              column(3,
@@ -979,20 +867,15 @@ ui <- dashboardPage(
                                     )
                              )
                            ),
-                           
                            br(),
-                           
                            h4("Most Important Factors"),
                            plotlyOutput("importance_plot", height = "300px"),
-                           
                            br(),
-                           
                            h4("Head-to-Head History"),
                            tableOutput("h2h_table")
-                       )  
-                )  
-              ),  
-              
+                       )
+                )
+              ),
               fluidRow(
                 column(width = 12,
                        box(width = NULL, status = "info", solidHeader = TRUE, 
@@ -1000,17 +883,13 @@ ui <- dashboardPage(
                            title = tags$span(style = "color: white;", 
                                              icon("question-circle"), 
                                              " How Does the Game Predictor Work? (Click to Expand)"),
-                           
                            tags$div(style = "padding: 15px;",
-                                    
-                                    h4( " The AI Prediction Model"),
+                                    h4(" The AI Prediction Model"),
                                     p("This predictor uses a ", tags$strong("Random Forest machine learning model"), 
                                       " trained on ", tags$strong("25 years of NFL games (2000-2025)"), 
                                       " to predict game outcomes. It's like having 500 expert analysts who each studied thousands of games and vote on who will win."),
-                                    
                                     hr(),
-                                    
-                                    h4( " Factor Weights (What Matters Most)"),
+                                    h4(" Factor Weights (What Matters Most)"),
                                     p("The model weighs different factors based on their predictive power:"),
                                     tags$ol(
                                       tags$li(tags$strong("Point Spread (3.0x weight)"), " - The betting line is the single most important factor. Vegas oddsmakers are very accurate, so a team favored by 7+ points has a significantly higher win probability."),
@@ -1020,177 +899,298 @@ ui <- dashboardPage(
                                       tags$li(tags$strong("Defensive Strength (1.2x weight)"), " - Average points allowed per game. Better defenses give teams an edge."),
                                       tags$li(tags$strong("Week of Season (1.0x weight)"), " - Early season games are less predictable than late-season games as teams improve/decline.")
                                     ),
-                                    
-                                    hr(),
-                                    
-                                    h4( " How Predictions Are Made"),
-                                    tags$ol(
-                                      tags$li(tags$strong("Input Your Data:"), " Enter team records, scoring stats, spread, and game conditions."),
-                                      tags$li(tags$strong("Model Processing:"), " The Random Forest runs 500 decision trees, each analyzing patterns like:"),
-                                      tags$ul(
-                                        tags$li("\"If home team is favored by 7+ and has good offense → 78% chance to win\""),
-                                        tags$li("\"If away team has elite defense and it's late season → 55% chance to win\""),
-                                        tags$li("\"If spread is close (-3 or less) and both offenses strong → 52% chance home wins\"")
-                                      ),
-                                      tags$li(tags$strong("Voting:"), " All 500 trees vote, and the average becomes your prediction."),
-                                      tags$li(tags$strong("Confidence Level:"), " How far the prediction is from 50% determines confidence (Very High/High/Moderate/Low).")
-                                    ),
-                                    
-                                    hr(),
-                                    
-                                    h4( " Expected Value (EV) Explained"),
-                                    p("The ", tags$strong("Betting Value Analysis"), " shows if a bet would be profitable long-term:"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Positive EV (+$5.20):"), " You'd profit $5.20 per $100 bet on average over many games. This is a VALUE BET."),
-                                      tags$li(tags$strong("Negative EV (-$8.40):"), " You'd lose $8.40 per $100 bet on average. AVOID this bet."),
-                                      tags$li(tags$strong("How it's calculated:"), " EV = (Win Probability × Payout) - (Loss Probability × Amount Wagered)")
-                                    ),
-                                    p(tags$strong("Example:"), " If the model says 60% win chance, but Vegas odds imply only 52%, you have an 8% edge. Over 100 bets, that edge turns into profit."),
-                                    
-                                    hr(),
-                                    
-                                    h4( " Model Accuracy"),
-                                    p("The model achieves ", tags$strong("~60% accuracy"), " on historical games, which is:"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Better than coin flips (50%)"), " - Proof it learned real patterns"),
-                                      tags$li(tags$strong("5-8% better than baseline"), " - A significant edge in sports betting"),
-                                      tags$li(tags$strong("Realistic for NFL"), " - Even Vegas experts only hit 55-58% against the spread")
-                                    ),
-                                    p(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369;",
-                                      icon("info-circle"), " ", tags$strong("Why not 90%+ accuracy?"), 
-                                      " NFL games have inherent randomness - injuries, bad calls, weather, luck. Even the best models can't predict every upset. 60% accuracy means winning 6 out of 10 bets, which is excellent for sports betting."),
-                                    
-                                    hr(),
-                                    
-                                    h4( " How to Use This Tool"),
-                                    tags$ol(
-                                      tags$li(tags$strong("Get Current Stats:"), " Look up each team's current record and scoring averages (available on ESPN, NFL.com)."),
-                                      tags$li(tags$strong("Find the Spread:"), " Check betting sites for the current point spread. Select which team is favored."),
-                                      tags$li(tags$strong("Set Game Conditions:"), " Choose indoor/outdoor and week of season."),
-                                      tags$li(tags$strong("Click Predict:"), " Review win probabilities and confidence level."),
-                                      tags$li(tags$strong("Check Value Bet Analysis:"), " If EV is positive and edge > 10%, consider it a strong betting opportunity."),
-                                      tags$li(tags$strong("Compare to Vegas:"), " If the model disagrees significantly with the spread (15%+ difference), investigate why before betting.")
-                                    ),
-                                    
-                                    hr(),
-                                    
-                                    h4( " Important Limitations"),
-                                    tags$ul(
-                                      tags$li(tags$strong("Trained on Historical Data:"), " The model has been trained on historical data which can skew results for a historically good or bad team (Ex: Team A is historically good, but is currently bad -> Model predicts team A victory."),
-                                      tags$li(tags$strong("No injury data:"), " The model doesn't know if the star QB is out. Always check injury reports."),
-                                      tags$li(tags$strong("No momentum:"), " Recent 3-game win streaks aren't factored in, only season-long averages."),
-                                      tags$li(tags$strong("No matchup specifics:"), " Doesn't know if a team struggles against running QBs or elite pass rushers."),
-                                      tags$li(tags$strong("Weather:"), " Only knows indoor vs outdoor, not specific conditions like heavy snow or high winds."),
-                                      tags$li(tags$strong("Coaching changes:"), " Doesn't account for new coaches, coordinators, or scheme changes mid-season.")
-                                    ),
-                                    
                                     p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
                                       icon("exclamation-triangle"), " ", tags$strong("Responsible Betting:"), 
                                       " This tool provides statistical analysis, NOT guaranteed predictions. Past performance does not guarantee future results. ",
-                                      "Always bet responsibly, never wager more than you can afford to lose, and use this as ONE tool in your research, not your only source. ",
-                                      "Consider this model's output alongside injury reports, weather forecasts, expert analysis, and your own judgment.")
+                                      "Always bet responsibly, never wager more than you can afford to lose, and use this as ONE tool in your research, not your only source.")
                            )
                        )
                 )
               )
-            ),
+      ),
       
       # ----------------------------------------
       # CLUSTER ANALYSIS TAB
       # ----------------------------------------
       tabItem(tabName = "cluster_analysis",
-              h2(icon("project-diagram"), " NFL Team Cluster Analysis"),
+              h2(icon("project-diagram"), " NFL Team Cluster & PCA Analysis"),
               fluidRow(
                 column(width = 4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Clustering Configuration"),
+                           title = tags$span(style = "color: white;", "Analysis Configuration"),
                            
-                           selectInput("cluster_factor1", "Factor 1 (X-Axis):",
-                                       choices = list(
-                                         "Win Percentage" = "win_pct",
-                                         "Average Points Scored" = "avg_points_scored",
-                                         "Average Points Allowed" = "avg_points_allowed",
-                                         "Point Differential" = "point_diff",
-                                         "Over Hit Rate" = "over_rate",
-                                         "Under Hit Rate" = "under_rate",
-                                         "Favorite Cover Rate" = "fav_cover_rate",
-                                         "Underdog Cover Rate" = "dog_cover_rate",
-                                         "Home Win Rate" = "home_win_rate",
-                                         "Away Win Rate" = "away_win_rate"
-                                       ),
-                                       selected = "win_pct"),
-                           
-                           selectInput("cluster_factor2", "Factor 2 (Y-Axis):",
-                                       choices = list(
-                                         "Win Percentage" = "win_pct",
-                                         "Average Points Scored" = "avg_points_scored",
-                                         "Average Points Allowed" = "avg_points_allowed",
-                                         "Point Differential" = "point_diff",
-                                         "Over Hit Rate" = "over_rate",
-                                         "Under Hit Rate" = "under_rate",
-                                         "Favorite Cover Rate" = "fav_cover_rate",
-                                         "Underdog Cover Rate" = "dog_cover_rate",
-                                         "Home Win Rate" = "home_win_rate",
-                                         "Away Win Rate" = "away_win_rate"
-                                       ),
-                                       selected = "avg_points_scored"),
+                           radioButtons("analysis_method", "Analysis Method:",
+                                        choices = c("K-Means Clustering" = "kmeans",
+                                                    "PCA (Principal Component Analysis)" = "pca"),
+                                        selected = "kmeans"),
                            
                            hr(),
                            
-                           sliderInput("n_clusters", "Number of Clusters:",
-                                       min = 1, max = 4, value = 4, step = 1),
-                           #PCA checkbox
-                           checkboxInput("use_pca", "Use PCA (Principal Component Analysis)", value = FALSE),
-                           
-                           hr(),
-                           
-                           h4(icon("info-circle"), " About Clustering:"),
-                           p("K-means clustering groups teams with similar characteristics..."),
-                           
-                           #PCA conditional panel
                            conditionalPanel(
-                             condition = "input.use_pca == true",
-                             div(style = "background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 10px;",
-                                 p(icon("info-circle"), strong(" PCA Enabled"), style = "margin: 0; color: #013369;"),
-                                 p("Principal components capture the maximum variance in your data. Cluster 1 and cluster 2 explain the most variation across both factors (higher numbers mean more variation from the average team). ", 
-                                   style = "margin: 5px 0 0 0; font-size: 13px;")
-                             )
+                             condition = "input.analysis_method == 'kmeans'",
+                             selectInput("cluster_factor1", "Factor 1 (X-Axis):",
+                                         choices = list(
+                                           "Win Percentage" = "win_pct",
+                                           "Average Points Scored" = "avg_points_scored",
+                                           "Average Points Allowed" = "avg_points_allowed",
+                                           "Point Differential" = "point_diff",
+                                           "Over Hit Rate" = "over_rate",
+                                           "Under Hit Rate" = "under_rate",
+                                           "Favorite Cover Rate" = "fav_cover_rate",
+                                           "Underdog Cover Rate" = "dog_cover_rate",
+                                           "Home Win Rate" = "home_win_rate",
+                                           "Away Win Rate" = "away_win_rate"
+                                         ),
+                                         selected = "win_pct"),
+                             selectInput("cluster_factor2", "Factor 2 (Y-Axis):",
+                                         choices = list(
+                                           "Win Percentage" = "win_pct",
+                                           "Average Points Scored" = "avg_points_scored",
+                                           "Average Points Allowed" = "avg_points_allowed",
+                                           "Point Differential" = "point_diff",
+                                           "Over Hit Rate" = "over_rate",
+                                           "Under Hit Rate" = "under_rate",
+                                           "Favorite Cover Rate" = "fav_cover_rate",
+                                           "Underdog Cover Rate" = "dog_cover_rate",
+                                           "Home Win Rate" = "home_win_rate",
+                                           "Away Win Rate" = "away_win_rate"
+                                         ),
+                                         selected = "avg_points_scored"),
+                             hr(),
+                             sliderInput("n_clusters", "Number of Clusters:",
+                                         min = 2, max = 6, value = 4, step = 1)
                            ),
                            
                            hr(),
                            
-                           h4(icon("info-circle"), " About Clustering:"),
-                           p("K-means clustering groups teams with similar characteristics together based on the 2 factors you select."),
-                           p("Teams in the same cluster share similar patterns across both metrics."),
-                           p("Use this to identify team archetypes and strategic patterns.")
+                           h4(icon("info-circle"), " About This Analysis:"),
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'kmeans'",
+                             p("K-means clustering groups teams with similar characteristics together based on the 2 factors you select."),
+                             p("Teams in the same cluster share similar patterns across both metrics.")
+                           ),
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'pca'",
+                             p(strong("PCA"), " reduces all team metrics into 2 principal components that capture the most variance."),
+                             p("Teams close together are similar across ", strong("all"), " metrics, not just two."),
+                             p("The loadings plot shows which variables contribute most to each component.")
+                           )
                        )
                 ),
                 column(width = 8,
                        box(width = NULL, solidHeader = TRUE,
-                           title = tags$span(style = "color: white;", "Team Clusters"),
+                           title = tags$span(style = "color: white;", "Analysis Results"),
                            plotlyOutput("cluster_plot", height = "500px"),
+                           
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'pca'",
+                             br(),
+                             h4("PCA Loadings (What Drives Each Component)"),
+                             plotlyOutput("pca_loadings_plot", height = "350px"),
+                             br(),
+                             h4("Variance Explained"),
+                             tableOutput("pca_variance_table")
+                           ),
+                           
+                           conditionalPanel(
+                             condition = "input.analysis_method == 'kmeans'",
+                             br(),
+                             h4("Cluster Characteristics"),
+                             tableOutput("cluster_summary_table")
+                           ),
+                           
                            br(),
-                           h4("Cluster Characteristics"),
-                           tableOutput("cluster_summary_table"),
-                           br(),
-                           h4("Teams by Cluster"),
+                           h4(uiOutput("teams_table_title")),
                            tableOutput("cluster_teams_table"),
                            br(),
-                           downloadButton("download_cluster_data", "Export Cluster Data to CSV", 
+                           downloadButton("download_cluster_data", "Export Data to CSV", 
                                           class = "btn-primary", icon = icon("download"))
                        )
                 )
+              ),
+              
+              # Explanation Box
+              fluidRow(
+                column(width = 12,
+                       box(width = NULL, status = "info", solidHeader = TRUE, 
+                           collapsible = TRUE, collapsed = TRUE,
+                           title = tags$span(style = "color: white;", 
+                                             icon("question-circle"), 
+                                             " Understanding PCA & Cluster Analysis (Click to Expand)"),
+                           tags$div(style = "padding: 15px;",
+                                    
+                                    h3(icon("compress-arrows-alt"), " What is PCA (Principal Component Analysis)?"),
+                                    
+                                    h4("The Problem PCA Solves"),
+                                    p("Imagine you have 32 NFL teams and want to compare them. But each team has ", 
+                                      strong("9 different statistics:"), " Win %, Points Scored, Points Allowed, Point Differential, Over Rate, Favorite Cover Rate, Underdog Cover Rate, Home Win Rate, and Away Win Rate."),
+                                    p(strong("How do you visualize 9 dimensions on a 2D screen?"), 
+                                      " You can't plot 9 axes on paper. PCA solves this by compressing all 9 statistics into ", 
+                                      strong("2 'super-statistics'"), " called Principal Components (PC1 and PC2)."),
+                                    
+                                    tags$div(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369; margin: 15px 0;",
+                                             p(style = "margin: 0;", icon("lightbulb"), " ", 
+                                               strong("Simple Analogy:"), " Imagine describing houses with 20 features (square footage, bedrooms, bathrooms, lot size, age, etc.). ",
+                                               "OR you could summarize with just 2 things: ", strong("'Size'"), " and ", strong("'Luxury Level'"), 
+                                               ". These two summaries capture MOST of what matters. PCA does the same thing mathematically with team stats.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-line"), " Understanding PC1 (Principal Component 1)"),
+                                    p("PC1 is the direction that captures the ", strong("most variation"), " between teams. Think of it as the single most important way teams differ from each other."),
+                                    p("In NFL data, PC1 typically represents ", strong("'Overall Team Quality'"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("High PC1 (right side of plot):"), " Good win %, scores lots of points, doesn't allow many points - ", span("excellent teams", style = "color: #28a745; font-weight: bold;")),
+                                      tags$li(strong("Low PC1 (left side of plot):"), " Poor win %, low scoring, gives up lots of points - ", span("struggling teams", style = "color: #dc3545; font-weight: bold;"))
+                                    ),
+                                    p(strong("PC1 answers:"), " 'On a single scale from worst to best, where does each team rank?'"),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("chart-bar"), " Understanding PC2 (Principal Component 2)"),
+                                    p("PC2 captures the ", strong("second biggest source of variation"), " - patterns that PC1 missed."),
+                                    p("In NFL data, PC2 often represents ", strong("'Betting Performance vs Actual Performance'"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("High PC2 (top of plot):"), " Covers spreads often, good betting value - regardless of overall win %"),
+                                      tags$li(strong("Low PC2 (bottom of plot):"), " Doesn't cover spreads, poor betting value - regardless of overall win %")
+                                    ),
+                                    p(strong("PC2 answers:"), " 'Among teams of similar quality, what else differentiates them?'"),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("map-marker-alt"), " Reading the PCA Plot - Position Guide"),
+                                    
+                                    tags$table(style = "width: 100%; border-collapse: collapse; margin: 15px 0;",
+                                               tags$thead(style = "background: #013369; color: white;",
+                                                          tags$tr(
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Position on Plot"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "What It Means"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Example")
+                                                          )
+                                               ),
+                                               tags$tbody(
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Top-Right")),
+                                                         tags$td(style = "padding: 10px;", "Great team + great betting value"),
+                                                         tags$td(style = "padding: 10px;", "Dynasty teams that dominate AND cover spreads")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Bottom-Right")),
+                                                   tags$td(style = "padding: 10px;", "Great team but poor betting value"),
+                                                   tags$td(style = "padding: 10px;", "Heavy favorites that win but don't beat inflated spreads")
+                                                 ),
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Top-Left")),
+                                                         tags$td(style = "padding: 10px;", "Bad team but good betting value"),
+                                                         tags$td(style = "padding: 10px;", "Scrappy underdogs that cover spreads despite losing")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Bottom-Left")),
+                                                   tags$td(style = "padding: 10px;", "Bad team AND bad betting value"),
+                                                   tags$td(style = "padding: 10px;", "Truly terrible teams that lose AND don't cover")
+                                                 ),
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("Teams Close Together")),
+                                                         tags$td(style = "padding: 10px;", "Similar across ALL 9 metrics"),
+                                                         tags$td(style = "padding: 10px;", "Comparable team profiles")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("Teams Far Apart")),
+                                                   tags$td(style = "padding: 10px;", "Very different team profiles"),
+                                                   tags$td(style = "padding: 10px;", "Opposite ends of the spectrum")
+                                                 )
+                                               )
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("arrows-alt"), " The Loadings Plot - What Drives Each Component?"),
+                                    p("The loadings plot shows ", strong("how much each original statistic contributes"), " to PC1 and PC2."),
+                                    tags$ul(
+                                      tags$li(strong("Variable pointing RIGHT:"), " That stat increases PC1 (team quality)"),
+                                      tags$li(strong("Variable pointing UP:"), " That stat increases PC2 (betting value)"),
+                                      tags$li(strong("Longer arrow:"), " That stat has MORE influence on the components"),
+                                      tags$li(strong("Shorter arrow:"), " That stat has LESS influence")
+                                    ),
+                                    p("Example: If 'Win %' points far right, it heavily influences PC1. If 'Underdog Cover %' points up, it drives PC2."),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("percentage"), " Variance Explained - How Good is the Summary?"),
+                                    p("The Variance Explained table shows ", strong("how much information each component captures"), ":"),
+                                    tags$ul(
+                                      tags$li(strong("PC1 = 45%:"), " PC1 alone captures 45% of all differences between teams"),
+                                      tags$li(strong("PC2 = 20%:"), " PC2 captures an additional 20%"),
+                                      tags$li(strong("Combined = 65%:"), " Together, PC1 + PC2 explain 65% of everything")
+                                    ),
+                                    
+                                    tags$div(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 15px 0;",
+                                             p(style = "margin: 0;", icon("info-circle"), " ",
+                                               strong("Is 65% Good?"), " Above 60% means the 2D plot is a reliable summary. 40-60% is decent but some nuance is lost. Below 40% means the plot is missing important differences.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("balance-scale"), " PCA vs K-Means Clustering - When to Use Each"),
+                                    
+                                    tags$table(style = "width: 100%; border-collapse: collapse; margin: 15px 0;",
+                                               tags$thead(style = "background: #013369; color: white;",
+                                                          tags$tr(
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Method"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Best For"),
+                                                            tags$th(style = "padding: 10px; text-align: left;", "Limitations")
+                                                          )
+                                               ),
+                                               tags$tbody(
+                                                 tags$tr(style = "background: #f8f9fa;",
+                                                         tags$td(style = "padding: 10px;", strong("PCA")),
+                                                         tags$td(style = "padding: 10px;", "Seeing the 'big picture' of how ALL teams compare using ALL 9 stats at once. Finding hidden patterns and similar teams."),
+                                                         tags$td(style = "padding: 10px;", "Components can be harder to interpret than raw stats.")
+                                                 ),
+                                                 tags$tr(
+                                                   tags$td(style = "padding: 10px;", strong("K-Means Clustering")),
+                                                   tags$td(style = "padding: 10px;", "Grouping teams into distinct categories based on 2 specific stats you choose. Easy to interpret."),
+                                                   tags$td(style = "padding: 10px;", "Only uses 2 of 9 available stats; ignores the rest.")
+                                                 )
+                                               )
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("futbol"), " Real-World NFL Example"),
+                                    tags$div(style = "background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;",
+                                             p("Let's say we want to find which NFL teams are most similar to the ", strong("Philadelphia Eagles"), 
+                                               " based on ALL their statistics - not just wins, but scoring, betting performance, home/away splits, everything."),
+                                             p("With PCA, we compress all 9 statistics into 2 scores and plot every team. ", 
+                                               strong("The teams closest to the Eagles on the PCA plot are the most similar overall.")),
+                                             p(style = "margin: 0;", "Without PCA, we'd have to make 36 different charts (every pair of 9 statistics) and try to mentally combine them. PCA does that combination mathematically in one view.")
+                                    ),
+                                    
+                                    hr(),
+                                    
+                                    h4(icon("check-circle"), " Key Takeaways"),
+                                    tags$ol(
+                                      tags$li(strong("PCA compresses many statistics into 2 'super-statistics'"), " so we can visualize complex data on a simple 2D plot."),
+                                      tags$li(strong("PC1 is the most important pattern"), " - usually representing overall team quality (good teams right, bad teams left)."),
+                                      tags$li(strong("PC2 is the second most important pattern"), " - often representing betting value or other secondary differences."),
+                                      tags$li(strong("Teams close together on the plot are similar"), " across all original statistics."),
+                                      tags$li(strong("Variance explained tells you how much information is preserved"), " - higher is better (aim for 60%+)."),
+                                      tags$li(strong("The loadings plot shows which stats drive each component"), " - helping you interpret what PC1 and PC2 represent.")
+                                    )
+                           )
+                       )
+                )
               )
-          ),
-    
+      ),
+      
       # ----------------------------------------
-      # BETTING LIBRARY TAB - ADD THIS ENTIRE SECTION
+      # BETTING LIBRARY TAB
       # ----------------------------------------
       tabItem(tabName = "betting_library",
               h2(icon("book"), " My Betting Library"),
               
               fluidRow(
-                # Summary Cards
                 column(3,
                        div(class = "metric-card",
                            h4("Total Bets"),
@@ -1250,7 +1250,6 @@ ui <- dashboardPage(
               
               fluidRow(
                 # Add Bet Form
-                # Add Bet Form
                 column(4,
                        box(width = NULL, status = "primary", solidHeader = TRUE,
                            title = tags$span(style = "color: white;", "Add New Bet"),
@@ -1260,24 +1259,9 @@ ui <- dashboardPage(
                            conditionalPanel(
                              condition = "input.lib_is_parlay == false",
                              selectInput("lib_home_team", "Home Team:", 
-                                         choices = c("Select..." = "", sort(c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                                                                              "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                                                                              "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                                                                              "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                                                                              "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                                                                              "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                                                                              "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                                                                              "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")))),
+                                         choices = c("Select..." = "", sort(nfl_teams))),
                              selectInput("lib_away_team", "Away Team:", 
-                                         choices = c("Select..." = "", sort(c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                                                                              "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                                                                              "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                                                                              "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                                                                              "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                                                                              "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                                                                              "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                                                                              "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")))),
-                             
+                                         choices = c("Select..." = "", sort(nfl_teams))),
                              selectInput("lib_bet_type", "Bet Type:",
                                          choices = c("Favorite", "Underdog", "Over", "Under"))
                            ),
@@ -1290,9 +1274,6 @@ ui <- dashboardPage(
                                            placeholder = "e.g., Chiefs -3, Bills Over 47.5, Eagles ML",
                                            rows = 4)
                            ),
-                           
-                           selectInput("lib_bet_type", "Bet Type:",
-                                       choices = c("Favorite", "Underdog", "Over", "Under")),
                            
                            numericInput("lib_amount_wagered", "Amount Wagered ($):",
                                         value = 100, min = 1, step = 1),
@@ -1336,7 +1317,6 @@ ui <- dashboardPage(
                 )
               )
       )
-            )
     )
-    )
-  
+  )
+)

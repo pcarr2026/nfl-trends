@@ -1243,7 +1243,6 @@ function(input, output, session) {
     
     # Calculate comprehensive team stats
     team_stats <- df %>%
-      # Home games
       group_by(team_home) %>%
       summarise(
         home_games = n(),
@@ -1260,7 +1259,6 @@ function(input, output, session) {
       ) %>%
       rename(team = team_home)
     
-    # Away games
     away_stats <- df %>%
       group_by(team_away) %>%
       summarise(
@@ -1278,7 +1276,6 @@ function(input, output, session) {
       ) %>%
       rename(team = team_away)
     
-    # Combine home and away stats
     combined_stats <- team_stats %>%
       full_join(away_stats, by = "team") %>%
       mutate(across(everything(), ~replace_na(.x, 0))) %>%
@@ -1313,104 +1310,88 @@ function(input, output, session) {
         home_win_rate = round((home_wins / home_games) * 100, 1),
         away_win_rate = round((away_wins / away_games) * 100, 1)
       ) %>%
-      filter(total_games >= 10)  # Only include teams with at least 10 games
+      filter(total_games >= 10)
     
-    return(combined_stats)
+    return(as.data.frame(combined_stats))
   })
   
-  # Perform clustering with position-based ordering
+  # Perform clustering
   cluster_results <- reactive({
     req(input$cluster_factor1, input$cluster_factor2, input$n_clusters)
     
     team_data <- cluster_team_data()
-    
-    # Select the 2 factors chosen by user
     factors <- c(input$cluster_factor1, input$cluster_factor2)
     
-    # Check for duplicate factors
     if(length(unique(factors)) != 2) {
       return(NULL)
     }
     
-    # Create clustering dataset
-    cluster_data <- team_data %>%
-      select(team, all_of(factors))
+    # Select and clean data
+    cluster_subset <- team_data[, c("team", factors[1], factors[2])]
+    cluster_subset <- cluster_subset[complete.cases(cluster_subset), ]
     
-    # Remove any rows with NA values in selected factors
-    cluster_data <- cluster_data %>%
-      filter(complete.cases(.))
-    
-    if(nrow(cluster_data) < input$n_clusters) {
+    if(nrow(cluster_subset) < input$n_clusters) {
       return(NULL)
     }
     
-    # Store original values for plotting
-    cluster_data$x_axis <- cluster_data[[factors[1]]]
-    cluster_data$y_axis <- cluster_data[[factors[2]]]
+    # Extract numeric values
+    vals1 <- cluster_subset[[factors[1]]]
+    vals2 <- cluster_subset[[factors[2]]]
     
-    # Normalize the data (scale to mean=0, sd=1) for clustering
-    cluster_matrix <- cluster_data %>%
-      select(all_of(factors)) %>%
-      scale()
+    # Create matrix
+    mat <- cbind(vals1, vals2)
+    mat_scaled <- scale(mat)
     
-    # PCA 
+    # PCA if needed
     if(input$use_pca) {
-      pca_result <- prcomp(cluster_matrix)
-      cluster_matrix <- pca_result$x[, 1:2]  # Use first 2 principal components
-      
-      # Update axis labels for PCA
-      cluster_data$x_axis <- cluster_matrix[, 1]
-      cluster_data$y_axis <- cluster_matrix[, 2]
+      pca <- prcomp(mat_scaled)
+      x_vals <- pca$x[, 1]
+      y_vals <- pca$x[, 2]
+      use_pca_flag <- TRUE
+    } else {
+      x_vals <- vals1
+      y_vals <- vals2
+      use_pca_flag <- FALSE
     }
     
-    # Perform k-means clustering
+    # Clustering
     set.seed(123)
-    kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
+    if(input$use_pca) {
+      km <- kmeans(cbind(x_vals, y_vals), centers = input$n_clusters, nstart = 25)
+    } else {
+      km <- kmeans(mat_scaled, centers = input$n_clusters, nstart = 25)
+    }
     
-    # Add cluster assignments
-    cluster_data$original_cluster <- kmeans_result$cluster
+    # Build result dataframe
+    result_df <- data.frame(
+      team = cluster_subset$team,
+      x_axis = x_vals,
+      y_axis = y_vals,
+      original_factor1 = vals1,
+      original_factor2 = vals2,
+      cluster = as.character(km$cluster),
+      stringsAsFactors = FALSE
+    )
     
-    # Calculate cluster centers in ORIGINAL (non-scaled) space
-    cluster_centers <- cluster_data %>%
-      group_by(original_cluster) %>%
-      summarise(
-        center_x = mean(x_axis),
-        center_y = mean(y_axis),
-        .groups = "drop"
-      ) %>%
-      # Order by position: highest Y first, then rightmost X
-      arrange(desc(center_y), desc(center_x)) %>%
-      mutate(new_cluster = row_number())
-    
-    # Map old cluster numbers to new ordered cluster numbers
-    cluster_data <- cluster_data %>%
-      left_join(cluster_centers %>% select(original_cluster, new_cluster), 
-                by = "original_cluster") %>%
-      mutate(cluster = as.factor(new_cluster)) %>%
-      select(-original_cluster, -new_cluster)
-    
-    return(list(
-      data = cluster_data,
-      kmeans = kmeans_result,
+    list(
+      data = result_df,
       factors = factors,
-      centers = cluster_centers
-    ))
+      use_pca = use_pca_flag
+    )
   })
   
- 
   # Cluster plot
   output$cluster_plot <- renderPlotly({
     results <- cluster_results()
     
     if(is.null(results)) {
       return(plot_ly() %>% 
-               layout(title = "Please select 2 different factors or ensure enough data is available"))
+               layout(title = "Please select 2 different factors"))
     }
     
-    data <- results$data
+    df <- results$data
     factors <- results$factors
     
-    # CREATE FACTOR LABELS 
     factor_labels <- c(
       "win_pct" = "Win %",
       "avg_points_scored" = "Avg Points Scored",
@@ -1424,8 +1405,7 @@ function(input, output, session) {
       "away_win_rate" = "Away Win %"
     )
     
-    # UPDATE LABELS BASED ON PCA
-    if(!is.null(results$use_pca) && results$use_pca) {
+    if(results$use_pca) {
       x_label <- "Principal Component 1"
       y_label <- "Principal Component 2"
       title_text <- "Team Clusters (PCA)"
@@ -1435,25 +1415,39 @@ function(input, output, session) {
       title_text <- paste("Team Clusters by", x_label, "vs", y_label)
     }
     
-    # plot_ly Code
-    plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
-            type = 'scatter', mode = 'markers+text',
-            text = ~team,
-            textposition = 'top center',
-            marker = list(size = 12),
-            hovertext = ~paste0(
-              "<b>", team, "</b><br>",
-              "Cluster: ", cluster, "<br>",
-              x_label, ": ", round(x_axis, 1), "<br>",
-              y_label, ": ", round(y_axis, 1)
-            ),
-            hoverinfo = 'text') %>%
-      layout(
-        title = title_text,  # CHANGED: was hardcoded, now uses title_text variable
-        xaxis = list(title = x_label),  # CHANGED: was hardcoded
-        yaxis = list(title = y_label),  # CHANGED: was hardcoded
-        showlegend = TRUE
-      )
+    # Build plot step by step
+    p <- plot_ly()
+    
+    # Add traces by cluster
+    for(clust in unique(df$cluster)) {
+      subset_df <- df[df$cluster == clust, ]
+      
+      p <- p %>%
+        add_trace(
+          x = subset_df$x_axis,
+          y = subset_df$y_axis,
+          text = subset_df$team,
+          type = 'scatter',
+          mode = 'markers+text',
+          textposition = 'top center',
+          marker = list(size = 12),
+          name = paste("Cluster", clust),
+          hovertext = paste0(
+            "<b>", subset_df$team, "</b><br>",
+            "Cluster: ", clust, "<br>",
+            x_label, ": ", round(subset_df$x_axis, 1), "<br>",
+            y_label, ": ", round(subset_df$y_axis, 1)
+          ),
+          hoverinfo = 'text'
+        )
+    }
+    
+    p %>% layout(
+      title = title_text,
+      xaxis = list(title = x_label),
+      yaxis = list(title = y_label),
+      showlegend = TRUE
+    )
   })
   
   # Cluster summary table
@@ -1464,23 +1458,47 @@ function(input, output, session) {
       return(data.frame(Message = "Please select 2 different factors"))
     }
     
-    data <- results$data
+    df <- results$data
     factors <- results$factors
     
-    # Calculate average of each factor by cluster
-    summary <- data %>%
-      group_by(cluster) %>%
-      summarise(
-        Teams = n(),
-        across(all_of(factors), ~round(mean(.x, na.rm = TRUE), 1)),
-        .groups = "drop"
-      ) %>%
-      arrange(as.numeric(as.character(cluster)))
+    if(results$use_pca) {
+      summary <- df %>%
+        group_by(cluster) %>%
+        summarise(
+          Teams = n(),
+          `PC1 (Avg)` = round(mean(x_axis), 2),
+          `PC2 (Avg)` = round(mean(y_axis), 2),
+          .groups = "drop"
+        )
+    } else {
+      factor_labels <- c(
+        "win_pct" = "Win %",
+        "avg_points_scored" = "Avg Points Scored",
+        "avg_points_allowed" = "Avg Points Allowed",
+        "point_diff" = "Point Differential",
+        "over_rate" = "Over Hit %",
+        "under_rate" = "Under Hit %",
+        "fav_cover_rate" = "Favorite Cover %",
+        "dog_cover_rate" = "Underdog Cover %",
+        "home_win_rate" = "Home Win %",
+        "away_win_rate" = "Away Win %"
+      )
+      
+      summary <- df %>%
+        group_by(cluster) %>%
+        summarise(
+          Teams = n(),
+          F1 = round(mean(original_factor1), 1),
+          F2 = round(mean(original_factor2), 1),
+          .groups = "drop"
+        )
+      
+      names(summary)[3] <- factor_labels[factors[1]]
+      names(summary)[4] <- factor_labels[factors[2]]
+    }
     
-    # Rename cluster column
     names(summary)[1] <- "Cluster"
-    
-    return(summary)
+    summary
   })
   
   # Teams by cluster table
@@ -1491,11 +1509,10 @@ function(input, output, session) {
       return(data.frame(Message = "Please select 2 different factors"))
     }
     
-    data <- results$data
+    df <- results$data
     
-    # Create a table showing which teams are in each cluster
-    teams_by_cluster <- data %>%
-      arrange(as.numeric(as.character(cluster)), team) %>%
+    teams_by_cluster <- df %>%
+      arrange(cluster, team) %>%
       group_by(cluster) %>%
       summarise(
         Teams = paste(team, collapse = ", "),
@@ -1503,48 +1520,11 @@ function(input, output, session) {
       )
     
     names(teams_by_cluster)[1] <- "Cluster"
-    
-    return(teams_by_cluster)
+    teams_by_cluster
   })
   
-  # Navigate to stadium map when button clicked
-  observeEvent(input$go_to_map, {
-    updateTabItems(session, "tabs", "analytics")
-  })
   
-  # Download handlers for CSV exports
-  output$download_betting_data <- downloadHandler(
-    filename = function() {
-      paste0("nfl_betting_analysis_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      write.csv(analysis_data(), file, row.names = FALSE)
-    }
-  )
   
-  output$download_roi_data <- downloadHandler(
-    filename = function() {
-      paste0("nfl_roi_results_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      data <- roi_results() %>%
-        select(schedule_season, schedule_week, team_home, team_away, 
-               bet_won, profit, cumulative_profit)
-      write.csv(data, file, row.names = FALSE)
-    }
-  )
-  
-  output$download_cluster_data <- downloadHandler(
-    filename = function() {
-      paste0("nfl_cluster_analysis_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      results <- cluster_results()
-      if(!is.null(results)) {
-        write.csv(results$data, file, row.names = FALSE)
-      }
-    }
-  )
   # ========================================
   # BETTING LIBRARY TAB
   # ========================================
