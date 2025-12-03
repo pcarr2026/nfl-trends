@@ -1,88 +1,101 @@
 function(input, output, session) {
   
-  # ========== TEAM PERSONALIZATION CODE - ADD THIS SECTION ==========
+  # ========== SHARED DATA ==========
+  # NFL Teams list (used throughout the app)
+  nfl_teams <- c(
+    "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
+    "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
+    "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
+    "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
+    "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
+    "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
+    "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
+    "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"
+  )
+  
+  # ========== TEAM PERSONALIZATION ==========
   # NFL Team Colors
   team_colors <- reactive({
     data.frame(
-      team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-               "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-               "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-               "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-               "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-               "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-               "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-               "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-      primary_color = c("#97233F", "#A71930", "#241773", "#00338D",
-                        "#0085CA", "#0B162A", "#FB4F14", "#311D00",
-                        "#041E42", "#FB4F14", "#0076B6", "#203731",
-                        "#03202F", "#002C5F", "#006778", "#E31837",
-                        "#000000", "#0080C6", "#003594", "#008E97",
-                        "#4F2683", "#002244", "#D3BC8D", "#0B2265",
-                        "#125740", "#004C54", "#FFB612", "#AA0000",
-                        "#002244", "#D50A0A", "#0C2340", "#773141"),
-      secondary_color = c("#FFB612", "#000000", "#9E7C0C", "#C60C30",
-                          "#101820", "#C83803", "#000000", "#FF3C00",
-                          "#869397", "#002244", "#B0B7BC", "#FFB612",
-                          "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
-                          "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
-                          "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
-                          "#000000", "#A5ACAF", "#000000", "#B3995D",
-                          "#69BE28", "#FF7900", "#418FDE", "#FFB612"),
+      team = nfl_teams,
+      primary_color = c(
+        "#97233F", "#A71930", "#241773", "#00338D",
+        "#0085CA", "#0B162A", "#FB4F14", "#311D00",
+        "#041E42", "#FB4F14", "#0076B6", "#203731",
+        "#03202F", "#002C5F", "#006778", "#E31837",
+        "#000000", "#0080C6", "#003594", "#008E97",
+        "#4F2683", "#002244", "#D3BC8D", "#0B2265",
+        "#125740", "#004C54", "#FFB612", "#AA0000",
+        "#002244", "#D50A0A", "#0C2340", "#773141"
+      ),
+      secondary_color = c(
+        "#FFB612", "#000000", "#9E7C0C", "#C60C30",
+        "#101820", "#C83803", "#000000", "#FF3C00",
+        "#869397", "#002244", "#B0B7BC", "#FFB612",
+        "#A71930", "#A2AAAD", "#D7A22A", "#FFB81C",
+        "#A5ACAF", "#FFC20E", "#FFA300", "#FC4C02",
+        "#FFC62F", "#C60C30", "#101820", "#A5ACAF",
+        "#000000", "#A5ACAF", "#000000", "#B3995D",
+        "#69BE28", "#FF7900", "#418FDE", "#FFB612"
+      ),
       stringsAsFactors = FALSE
     )
-  })
-  
-  # Show team selection modal on startup
-  observe({
-    showModal(modalDialog(
-      title = tags$div(
-        style = "text-align: center;",
-        icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
-        h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
-      ),
-      tags$div(
-        style = "text-align: center; padding: 20px;",
-        h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
-        p("The dashboard will personalize to your team's colors!"),
-        selectInput("favorite_team_select", NULL,
-                    choices = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                                "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                                "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                                "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                                "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                                "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                                "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                                "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
-                    selected = "Philadelphia Eagles",
-                    width = "100%")
-      ),
-      footer = tagList(
-        actionButton("skip_team", "Skip", class = "btn-default"),
-        actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
-                     icon = icon("check"))
-      ),
-      size = "m",
-      easyClose = FALSE
-    ))
   })
   
   # Store favorite team
   favorite_team <- reactiveVal(NULL)
   
-  observe(priority = 1, {
-    # Load favorite team if stored
+  # Track if modal has been shown
+  modal_shown <- reactiveVal(FALSE)
+  
+  # Load stored team on startup
+  observeEvent(input$store$favorite_team, {
     if (!is.null(input$store$favorite_team)) {
       favorite_team(input$store$favorite_team)
-      
-      # Update the modal dropdown so it matches the stored value
-      updateSelectInput(session, "favorite_team_select",
-                        selected = input$store$favorite_team)
-      
-      # Optionally skip showing the modal entirely if we already know their team
-      removeModal()
     }
-  })
+  }, once = TRUE, ignoreNULL = FALSE)
   
+  # Show modal once on startup - use invalidateLater to ensure session is ready
+  observe({
+    # Only run once
+    if (modal_shown()) return()
+    
+    # Small delay to let session initialize
+    invalidateLater(100, session)
+    
+    # Check if this is the first real run (after the delay)
+    isolate({
+      if (!modal_shown()) {
+        modal_shown(TRUE)
+        
+        stored_team <- favorite_team()
+        
+        showModal(modalDialog(
+          title = tags$div(
+            style = "text-align: center;",
+            icon("football-ball", style = "font-size: 48px; color: #013369; margin-bottom: 20px;"),
+            h2("Welcome to NFL Analytics Pro!", style = "color: #013369; margin-top: 10px;")
+          ),
+          tags$div(
+            style = "text-align: center; padding: 20px;",
+            h4("Select Your Favorite Team", style = "margin-bottom: 20px;"),
+            p("The dashboard will personalize to your team's colors!"),
+            selectInput("favorite_team_select", NULL,
+                        choices = nfl_teams,
+                        selected = if (!is.null(stored_team) && stored_team != "Default") stored_team else "Philadelphia Eagles",
+                        width = "100%")
+          ),
+          footer = tagList(
+            actionButton("skip_team", "Skip", class = "btn-default"),
+            actionButton("confirm_team", "Let's Go!", class = "btn-primary", 
+                         icon = icon("check"))
+          ),
+          size = "m",
+          easyClose = FALSE
+        ))
+      }
+    })
+  })
   
   observeEvent(input$confirm_team, {
     favorite_team(input$favorite_team_select)
@@ -95,20 +108,18 @@ function(input, output, session) {
     removeModal()
   })
   
-
-  
   # Generate dynamic CSS based on favorite team
   output$dynamic_css <- renderUI({
     req(favorite_team())
     
-    if(favorite_team() == "Default") {
+    if (favorite_team() == "Default") {
       return(NULL)
     }
     
     colors <- team_colors()
     team_color_data <- colors[colors$team == favorite_team(), ]
     
-    if(nrow(team_color_data) == 0) {
+    if (nrow(team_color_data) == 0) {
       return(NULL)
     }
     
@@ -120,82 +131,65 @@ function(input, output, session) {
       .main-header .logo {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
       }
-      
       .main-header .navbar {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
       }
-      
       /* Sidebar Active Item */
       .sidebar-menu > li.active > a {
         background: linear-gradient(90deg, ", primary, "0%, transparent 100%) !important;
         border-left-color: ", primary, " !important;
       }
-      
       /* Box Headers */
       .box-header {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
       }
-      
       .box.box-solid.box-primary > .box-header {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
       }
-      
       /* Buttons */
       .btn-primary {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
         box-shadow: 0 4px 15px ", primary, "66 !important;
       }
-      
       .btn-primary:hover {
         background: linear-gradient(135deg, ", secondary, " 0%, ", primary, " 100%) !important;
         box-shadow: 0 6px 25px ", secondary, "66 !important;
       }
-      
       /* Headers */
       h2 {
         color: ", primary, " !important;
         border-bottom-color: ", secondary, " !important;
       }
-      
       h3, h4 {
         color: ", primary, " !important;
       }
-      
       /* Metric Cards Accent */
       .metric-card::before {
         background: linear-gradient(90deg, ", primary, ", ", secondary, ") !important;
       }
-      
       .metric-card:hover {
         border-color: ", secondary, " !important;
       }
-      
       .metric-card h2 {
         color: ", primary, " !important;
       }
-      
       /* Home Container Accent */
       .home-container::before {
         background: linear-gradient(90deg, ", primary, ", ", secondary, ", ", primary, ") !important;
       }
-      
       .home-title {
         color: ", primary, " !important;
       }
-      
       .home-subtitle {
         color: ", secondary, " !important;
       }
-      
       /* Feature List Accent */
       .feature-list {
         border-left-color: ", secondary, " !important;
       }
-      
       .feature-list li::before {
         color: ", secondary, " !important;
       }
-      
       /* Table Headers */
       table thead {
         background: linear-gradient(135deg, ", primary, " 0%, ", secondary, " 100%) !important;
@@ -203,23 +197,10 @@ function(input, output, session) {
     ")))
   })
   
-  # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
-  # Team logo URLs
-  
-  # ... rest of your code
-  
-  # ========== YOUR EXISTING CODE - LOAD AND PROCESS DATA ==========
-  # Team logo URLs
+  # ========== TEAM LOGOS ==========
   team_logos <- reactive({
     data.frame(
-      team = c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-               "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-               "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-               "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-               "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-               "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-               "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-               "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders"),
+      team = nfl_teams,
       logo_url = c(
         "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
         "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
@@ -258,16 +239,13 @@ function(input, output, session) {
     )
   })
   
+  # ========== LOAD AND PROCESS DATA ==========
   nfl_data <- reactive({
-    df <- read.csv("../cleaned_nfl_data.csv")
+    df <- read.csv("cleaned_nfl_data.csv")
     
-    # Add calculated columns
     df <- df %>%
       mutate(
-        # Treat blank/NA/empty weather as outdoor
         stadium_type = ifelse(!is.na(weather_detail) & weather_detail == "indoor", "Indoor", "Outdoor"),
-        
-        # Temperature categories (blank = outdoor)
         temp_category = case_when(
           weather_detail == "indoor" ~ "Indoor",
           is.na(weather_temperature) ~ "Outdoor (Unknown Temp)",
@@ -275,34 +253,24 @@ function(input, output, session) {
           weather_temperature < 70 ~ "Moderate (50-69°F)",
           TRUE ~ "Warm (70°F+)"
         ),
-        
-        # Season type: Regular season (weeks 1-18) vs Playoffs
         season_type = ifelse(schedule_playoff == FALSE, 
                              paste0("Week ", schedule_week),
                              "Playoffs"),
         season_type = factor(season_type, 
                              levels = c(paste0("Week ", 1:18), "Playoffs"),
                              ordered = TRUE), 
-        # Calculate total points
         total_points = score_home + score_away,
-        
-        # Determine if over or under hit
         over_hit = ifelse(total_points > over_under_line, "Over", "Under"),
-        
-        # Check if home team was favorite
         home_is_favorite = (team_home == team_favorite_name)
       )
     
     return(df)
   })
   
-  # ========== YOUR EXISTING BETTING TRENDS CODE ==========
-  
-  # Filter data based on selections
+  # ========== BETTING TRENDS ==========
   filtered_data <- reactive({
     df <- nfl_data()
     
-    # For home team + favorite: only include when home team IS the favorite
     if (input$bet_type == "fav_correct" && input$factor == "team_home") {
       df <- df %>% filter(home_is_favorite == TRUE)
     }
@@ -310,7 +278,6 @@ function(input, output, session) {
     return(df)
   })
   
-  # Calculate hit rates
   analysis_data <- reactive({
     df <- filtered_data()
     
@@ -333,7 +300,6 @@ function(input, output, session) {
       arrange(desc(`Hit Rate`))
   })
   
-  # Plot
   output$plot <- renderPlotly({
     data <- analysis_data()
     
@@ -378,12 +344,10 @@ function(input, output, session) {
       )
   })
   
-  # Table
   output$table <- renderTable({
     analysis_data()
   })
   
-  # Explanation text
   output$explanation_text <- renderUI({
     text <- ""
     
@@ -403,17 +367,13 @@ function(input, output, session) {
                 text, "</div>"))
   })
   
-  # ========== YOUR EXISTING ROI CALCULATOR CODE ==========
-  
-  # Populate team dropdown dynamically based on strategy
+  # ========== ROI CALCULATOR ==========
   observeEvent(input$roi_strategy, {
     df <- nfl_data()
     
-    # Get unique teams based on strategy
     if (input$roi_strategy == "favorite") {
       teams <- sort(unique(df$team_favorite_name))
     } else if (input$roi_strategy == "underdog") {
-      # For underdogs, get teams that aren't the favorite
       underdog_teams <- df %>%
         mutate(underdog = ifelse(team_home == team_favorite_name, team_away, team_home)) %>%
         pull(underdog) %>%
@@ -421,11 +381,9 @@ function(input, output, session) {
         sort()
       teams <- underdog_teams
     } else {
-      # For over/under, use all unique teams
       teams <- sort(unique(c(df$team_home, df$team_away)))
     }
     
-    # Remove any NA values
     teams <- teams[!is.na(teams)]
     
     updateSelectInput(session, "roi_team_filter",
@@ -433,7 +391,6 @@ function(input, output, session) {
                       selected = "all")
   })
   
-  # Calculate ROI results
   roi_results <- reactive({
     df <- nfl_data()
     
@@ -441,7 +398,6 @@ function(input, output, session) {
       filter(schedule_season >= input$roi_year_range[1] & 
                schedule_season <= input$roi_year_range[2])
     
-    # Determine which team we're betting on for each game
     df <- df %>%
       mutate(
         bet_team = case_when(
@@ -452,13 +408,10 @@ function(input, output, session) {
         )
       )
     
-    # Filter by team if not "All Teams"
     if (input$roi_team_filter != "all") {
-      df <- df %>%
-        filter(bet_team == input$roi_team_filter)
+      df <- df %>% filter(bet_team == input$roi_team_filter)
     }
     
-    # Determine if bet won based on strategy
     df <- df %>%
       mutate(
         bet_won = case_when(
@@ -468,34 +421,28 @@ function(input, output, session) {
           input$roi_strategy == "under" ~ !is.na(over_hit) & (over_hit == "Under"),
           TRUE ~ FALSE
         ),
-        # Calculate odds multiplier based on strategy and spread
         odds_multiplier = case_when(
-          # Underdog moneyline - better payouts for bigger underdogs
           input$roi_strategy == "underdog" & !is.na(spread_favorite) ~ case_when(
-            abs(spread_favorite) <= 3 ~ 1.20,      # +120 odds
-            abs(spread_favorite) <= 7 ~ 1.80,      # +180 odds
-            abs(spread_favorite) <= 10 ~ 2.50,     # +250 odds
-            TRUE ~ 3.50                             # +350 odds for big underdogs
+            abs(spread_favorite) <= 3 ~ 1.20,
+            abs(spread_favorite) <= 7 ~ 1.80,
+            abs(spread_favorite) <= 10 ~ 2.50,
+            TRUE ~ 3.50
           ),
-          # Favorite moneyline - worse payouts for bigger favorites
           input$roi_strategy == "favorite" & !is.na(spread_favorite) ~ case_when(
-            abs(spread_favorite) <= 3 ~ 0.9091,    # -110 odds (risk 110 to win 100)
-            abs(spread_favorite) <= 7 ~ 0.6667,    # -150 odds (risk 150 to win 100)
-            abs(spread_favorite) <= 10 ~ 0.5000,   # -200 odds (risk 200 to win 100)
-            TRUE ~ 0.3333                           # -300 odds (risk 300 to win 100)
+            abs(spread_favorite) <= 3 ~ 0.9091,
+            abs(spread_favorite) <= 7 ~ 0.6667,
+            abs(spread_favorite) <= 10 ~ 0.5000,
+            TRUE ~ 0.3333
           ),
-          TRUE ~ 0.9091  # -110 odds for over/under
+          TRUE ~ 0.9091
         ),
-        # Calculate profit using appropriate odds
         profit = ifelse(bet_won, 
                         input$roi_bet_amount * odds_multiplier, 
                         -input$roi_bet_amount)
       )
     
-    # Remove any rows with NA profits
     df <- df %>% filter(!is.na(profit) & !is.na(bet_won))
     
-    # Calculate cumulative profit for chart
     df <- df %>%
       arrange(schedule_season, schedule_week) %>%
       mutate(cumulative_profit = cumsum(profit))
@@ -503,7 +450,6 @@ function(input, output, session) {
     return(df)
   })
   
-  # Summary statistics
   output$roi_total_games <- renderText({
     nrow(roi_results())
   })
@@ -520,7 +466,6 @@ function(input, output, session) {
     df <- roi_results()
     if (nrow(df) == 0) return("$0")
     total_profit <- sum(df$profit, na.rm = TRUE)
-    color <- ifelse(total_profit >= 0, "green", "red")
     sign <- ifelse(total_profit >= 0, "+", "")
     paste0(sign, "$", formatC(total_profit, format = "f", digits = 0, big.mark = ","))
   })
@@ -535,7 +480,6 @@ function(input, output, session) {
     paste0(sign, round(roi_pct, 1), "%")
   })
   
-  # Cumulative profit chart
   output$roi_plot <- renderPlotly({
     df <- roi_results()
     
@@ -543,10 +487,8 @@ function(input, output, session) {
       return(plot_ly() %>% layout(title = "No games found for this team/strategy combination"))
     }
     
-    # Create game number
     df$game_num <- 1:nrow(df)
     
-    # Determine chart title based on filter
     chart_title <- if (input$roi_team_filter == "all") {
       "Cumulative Profit Over Time (All Teams)"
     } else {
@@ -571,27 +513,19 @@ function(input, output, session) {
       )
   })
   
-  # Team performance table
   output$roi_team_table <- renderTable({
     df <- roi_results()
     
-    # Determine which team to group by based on strategy
     if (input$roi_strategy %in% c("favorite", "underdog")) {
-      # For spread bets, group by the team we're betting on
       if (input$roi_strategy == "favorite") {
-        df <- df %>%
-          mutate(bet_team = team_favorite_name)
+        df <- df %>% mutate(bet_team = team_favorite_name)
       } else {
-        df <- df %>%
-          mutate(bet_team = ifelse(team_home == team_favorite_name, team_away, team_home))
+        df <- df %>% mutate(bet_team = ifelse(team_home == team_favorite_name, team_away, team_home))
       }
     } else {
-      # For over/under, group by home team
-      df <- df %>%
-        mutate(bet_team = team_home)
+      df <- df %>% mutate(bet_team = team_home)
     }
     
-    # Calculate team stats
     team_stats <- df %>%
       group_by(bet_team) %>%
       summarise(
@@ -602,9 +536,8 @@ function(input, output, session) {
         .groups = "drop"
       ) %>%
       arrange(desc(Profit)) %>%
-      head(10)  # Show top 10
+      head(10)
     
-    # Format profit with $ and +/- sign
     team_stats <- team_stats %>%
       mutate(
         Profit = paste0(ifelse(Profit >= 0, "+$", "-$"), 
@@ -616,9 +549,7 @@ function(input, output, session) {
     return(team_stats)
   })
   
-  # ========== STADIUM MAP CODE ==========
-  
-  # Stadium image URLs mapping
+  # ========== STADIUM MAP ==========
   stadium_images <- reactive({
     data.frame(
       stadium = c("Arrowhead Stadium", "AT&T Stadium", "Lambeau Field", "Gillette Stadium",
@@ -662,21 +593,18 @@ function(input, output, session) {
     )
   })
   
-  # Load stadium coordinates
   stadium_coords <- reactive({
-    read.csv("../nfl_stadiums_coordinates.csv", stringsAsFactors = FALSE)
+    read.csv("nfl_stadiums_coordinates.csv", stringsAsFactors = FALSE)
   })
   
-  # Aggregate stadium data
   stadium_data <- reactive({
     df <- nfl_data()
     coords <- stadium_coords()
     
-    # Filter by year range
     df <- df %>%
       filter(schedule_season >= input$stadium_year_range[1],
              schedule_season <= input$stadium_year_range[2])
-    # Calculate stats by stadium
+    
     stadium_stats <- df %>%
       group_by(stadium) %>%
       summarise(
@@ -687,26 +615,22 @@ function(input, output, session) {
         .groups = "drop"
       )
     
-    # Join with coordinates
     stadium_stats <- stadium_stats %>%
       left_join(coords, by = "stadium") %>%
       filter(!is.na(latitude) & !is.na(longitude))
     
-    # Join with stadium images
     stadium_stats <- stadium_stats %>%
       left_join(stadium_images(), by = "stadium")
     
     return(stadium_stats)
   })
   
-  # Populate stadium dropdown
   observe({
     stadiums <- stadium_data()$stadium
     updateSelectInput(session, "stadium_select",
                       choices = c("All Stadiums" = "all", setNames(stadiums, stadiums)))
   })
   
-  # Render the map
   output$map <- renderLeaflet({
     data <- stadium_data()
     
@@ -714,15 +638,12 @@ function(input, output, session) {
       return(leaflet() %>% addTiles() %>% setView(lng = -98, lat = 39, zoom = 4))
     }
     
-    # Determine which metric to show
-    # Determine which metric to show and create gradient based on counts
     if (input$metric == "overs") {
       data$display_count <- data$overs
       metric_label <- "Overs"
       
-      # Gradient based on number of overs relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
+        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),
         domain = c(min(data$overs), max(data$overs))
       )
       data$circle_color <- color_palette(data$overs)
@@ -733,9 +654,8 @@ function(input, output, session) {
       data$display_count <- data$unders
       metric_label <- "Unders"
       
-      # Gradient based on number of unders relative to all stadiums
       color_palette <- colorNumeric(
-        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),  # Red -> Yellow -> Green
+        palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),
         domain = c(min(data$unders), max(data$unders))
       )
       data$circle_color <- color_palette(data$unders)
@@ -743,16 +663,14 @@ function(input, output, session) {
       legend_values <- data$unders
     }
     
-    # Create popup HTML with images
     data$popup_html <- sapply(1:nrow(data), function(i) {
-      # Only include image if URL exists and is valid
       image_tag <- if (!is.na(data$image_url[i]) && data$image_url[i] != "") {
         paste0(
           "<img src='", data$image_url[i], "' ",
           "width='250px' ",
           "style='border-radius: 5px; margin-bottom: 10px; display: block;' ",
-          "onerror=\"this.style.display='none'\" ",  # Hide if image fails to load
-          "loading='lazy'><br>"  # Lazy load images
+          "onerror=\"this.style.display='none'\" ",
+          "loading='lazy'><br>"
         )
       } else {
         ""
@@ -769,7 +687,6 @@ function(input, output, session) {
       )
     })
     
-    # Filter if specific stadium selected
     if (input$stadium_select != "all") {
       data <- data %>% filter(stadium == input$stadium_select)
       zoom_level <- 12
@@ -781,16 +698,15 @@ function(input, output, session) {
       center_lon <- -98
     }
     
-    # Create map
     leaflet(data) %>%
       addTiles() %>%
       setView(lng = center_lon, lat = center_lat, zoom = zoom_level) %>%
       addCircleMarkers(
         lng = ~longitude,
         lat = ~latitude,
-        radius = ~sqrt(display_count) * 3 +5 ,
+        radius = ~sqrt(display_count) * 3 + 5,
         fillColor = ~circle_color,
-        color = "#ffffff",  # White border
+        color = "#ffffff",
         weight = 2,
         fillOpacity = 0.7,
         popup = ~popup_html,
@@ -805,9 +721,7 @@ function(input, output, session) {
       )
   })
   
-  # ========== GAME PREDICTOR CODE ==========
-  
-  # Populate team dropdowns
+  # ========== GAME PREDICTOR ==========
   observe({
     data <- nfl_data()
     teams <- sort(unique(c(data$team_home, data$team_away)))
@@ -817,27 +731,22 @@ function(input, output, session) {
     updateSelectInput(session, "pred_away_team", choices = teams, selected = teams[2])
   })
   
-  # Auto-fill spread and stadium when teams are selected
   observeEvent(c(input$pred_home_team, input$pred_away_team), {
     req(input$pred_home_team, input$pred_away_team)
     
     data <- nfl_data()
     
-    # Find historical matchups
     matchups <- data %>%
       filter(team_home == input$pred_home_team & team_away == input$pred_away_team)
     
     if (nrow(matchups) > 0) {
-      # Calculate averages from historical matchups
       avg_spread <- mean(matchups$spread_favorite, na.rm = TRUE)
       most_common_stadium <- names(sort(table(matchups$stadium_type), decreasing = TRUE))[1]
       
-      # Update inputs
       updateNumericInput(session, "pred_spread", value = round(avg_spread, 1))
       updateSelectInput(session, "pred_stadium", 
                         selected = ifelse(is.na(most_common_stadium), "Outdoor", most_common_stadium))
     } else {
-      # No historical data, use home team averages
       home_games <- data %>% filter(team_home == input$pred_home_team)
       
       if (nrow(home_games) > 0) {
@@ -851,11 +760,9 @@ function(input, output, session) {
     }
   })
   
-  # Build Random Forest model with real offensive/defensive stats
   prediction_model <- reactive({
     data <- nfl_data()
     
-    # Calculate cumulative team statistics for each game (using data UP TO that point)
     training_data <- data %>%
       arrange(schedule_season, schedule_week) %>%
       group_by(team_home) %>%
@@ -863,8 +770,6 @@ function(input, output, session) {
         home_games_played = row_number() - 1,
         home_wins = cumsum(lag(winner == team_home, default = FALSE)),
         home_win_pct = ifelse(home_games_played > 0, home_wins / home_games_played, 0.5),
-        
-        # Calculate cumulative points scored and allowed (offense/defense metrics)
         home_total_scored = cumsum(lag(score_home, default = 0)),
         home_total_allowed = cumsum(lag(score_away, default = 0)),
         home_avg_scored = ifelse(home_games_played > 0, home_total_scored / home_games_played, 20),
@@ -876,8 +781,6 @@ function(input, output, session) {
         away_games_played = row_number() - 1,
         away_wins = cumsum(lag(winner == team_away, default = FALSE)),
         away_win_pct = ifelse(away_games_played > 0, away_wins / away_games_played, 0.5),
-        
-        # Calculate cumulative points scored and allowed (offense/defense metrics)
         away_total_scored = cumsum(lag(score_away, default = 0)),
         away_total_allowed = cumsum(lag(score_home, default = 0)),
         away_avg_scored = ifelse(away_games_played > 0, away_total_scored / away_games_played, 20),
@@ -889,26 +792,20 @@ function(input, output, session) {
         is_indoor = (stadium_type == "Indoor"),
         home_strength = home_win_pct * 1.5,
         away_strength = away_win_pct * 1.4,
-        
-        # Use actual scoring metrics instead of synthetic rankings
-        home_off_strength = log(home_avg_scored + 1) * 5 * 1.3 ,     # Higher = better offense
-        home_def_strength = 75 - (log(home_avg_allowed+1) * 5 * 1.2),  # Higher = better defense (fewer points allowed)
-        away_off_strength = log(away_avg_scored+1) * 5 * 1.3,     # Higher = better offense
-        away_def_strength = 75 - (log(away_avg_allowed+1) * 5 * 1.2),  # Higher = better defense (fewer points allowed)
-        
-        #Encode spread from HOME TEAM perspective (negative = home favored)
+        home_off_strength = log(home_avg_scored + 1) * 5 * 1.3,
+        home_def_strength = 75 - (log(home_avg_allowed + 1) * 5 * 1.2),
+        away_off_strength = log(away_avg_scored + 1) * 5 * 1.3,
+        away_def_strength = 75 - (log(away_avg_allowed + 1) * 5 * 1.2),
         spread_weighted = case_when(
           is.na(spread_favorite) ~ 0,
           is.na(team_favorite_name) ~ 0,
-          team_home == team_favorite_name ~ -abs(spread_favorite),  # Home favored: negative
-          team_away == team_favorite_name ~ abs(spread_favorite),   # Away favored: positive
+          team_home == team_favorite_name ~ -abs(spread_favorite),
+          team_away == team_favorite_name ~ abs(spread_favorite),
           TRUE ~ 0
         )
       ) %>%
       filter(!is.na(spread_favorite) & !is.na(home_won) & home_games_played > 0 & away_games_played > 0)
     
-    # Build Random Forest model with real offensive/defensive stats
-    library(randomForest)
     model <- randomForest(as.factor(home_won) ~ spread_weighted + is_indoor + schedule_week +
                             home_strength + away_strength + 
                             home_off_strength + home_def_strength + 
@@ -921,47 +818,37 @@ function(input, output, session) {
     list(model = model, data = training_data)
   })
   
-  # Make prediction when button is clicked
   prediction_result <- eventReactive(input$predict_btn, {
     model_info <- prediction_model()
     
-    # Calculate win percentages from user input
     home_total_games <- input$pred_home_wins + input$pred_home_losses
     away_total_games <- input$pred_away_wins + input$pred_away_losses
     
-    home_win_pct <- if(home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
-    away_win_pct <- if(away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
+    home_win_pct <- if (home_total_games > 0) input$pred_home_wins / home_total_games else 0.5
+    away_win_pct <- if (away_total_games > 0) input$pred_away_wins / away_total_games else 0.5
     
-    # Calculate the actual spread value based on which team is favored
-    actual_spread <- if(input$pred_home_favored) {
-      -abs(input$pred_spread)  # Home favored = negative spread
+    actual_spread <- if (input$pred_home_favored) {
+      -abs(input$pred_spread)
     } else {
-      abs(input$pred_spread)   # Away favored = positive spread
+      abs(input$pred_spread)
     }
     
-    # Create prediction data with user inputs using REAL scoring stats
     new_data <- data.frame(
       spread_weighted = actual_spread * 0.85,
       is_indoor = (input$pred_stadium == "Indoor"),
       schedule_week = input$pred_week,
       home_strength = home_win_pct * 1.5,
       away_strength = away_win_pct * 1.4,
-      
-      # Use actual average points scored/allowed from user input
-      home_off_strength = log(input$pred_home_avg_scored+1) * 5 * 1.3,
-      home_def_strength = 75 - (log(input$pred_home_avg_allowed+1) * 5 * 1.2),
-      away_off_strength = log(input$pred_away_avg_scored+1) * 5 * 1.3,
-      away_def_strength = 75 - (log(input$pred_away_avg_allowed+1) * 5 * 1.2)
+      home_off_strength = log(input$pred_home_avg_scored + 1) * 5 * 1.3,
+      home_def_strength = 75 - (log(input$pred_home_avg_allowed + 1) * 5 * 1.2),
+      away_off_strength = log(input$pred_away_avg_scored + 1) * 5 * 1.3,
+      away_def_strength = 75 - (log(input$pred_away_avg_allowed + 1) * 5 * 1.2)
     )
     
-    # Get probability from Random Forest
-    prob <- predict(model_info$model, newdata = new_data, type = "prob")[,2]
+    prob <- predict(model_info$model, newdata = new_data, type = "prob")[, 2]
     
-    # Apply spread-based adjustment to ensure favored teams are heavily favored
-    spread_adjustment <- actual_spread*(0.0075)
-    adjusted_prob <- prob  + spread_adjustment
-    
-    # Ensure probability stays within reasonable bounds
+    spread_adjustment <- actual_spread * (0.0075)
+    adjusted_prob <- prob + spread_adjustment
     adjusted_prob <- max(0.05, min(0.95, adjusted_prob))
     
     list(
@@ -972,17 +859,15 @@ function(input, output, session) {
     )
   })
   
-  # Display prediction result
   output$prediction_result <- renderUI({
     result <- prediction_result()
     logos <- team_logos()
     
-    # Get logo URLs
     home_logo <- logos$logo_url[logos$team == input$pred_home_team]
     away_logo <- logos$logo_url[logos$team == input$pred_away_team]
     
-    if(length(home_logo) == 0) home_logo <- ""
-    if(length(away_logo) == 0) away_logo <- ""
+    if (length(home_logo) == 0) home_logo <- ""
+    if (length(away_logo) == 0) away_logo <- ""
     
     prob_home <- result$prob_home * 100
     prob_away <- result$prob_away * 100
@@ -1037,7 +922,6 @@ function(input, output, session) {
     )
   })
   
-  # BETTING VALUE FINDER
   output$value_bet_analysis <- renderUI({
     req(input$predict_btn)
     result <- prediction_result()
@@ -1045,17 +929,14 @@ function(input, output, session) {
     prob_home <- result$prob_home
     prob_away <- result$prob_away
     
-    # Calculate the actual spread value based on which team is favored
-    actual_spread <- if(input$pred_home_favored) {
-      -abs(input$pred_spread)  # Home favored = negative spread
+    actual_spread <- if (input$pred_home_favored) {
+      -abs(input$pred_spread)
     } else {
-      abs(input$pred_spread)   # Away favored = positive spread
+      abs(input$pred_spread)
     }
     
-    # Calculate implied probability from spread using standard conversion
     spread <- actual_spread
     
-    # More accurate Vegas implied probability calculation
     if (abs(spread) < 1) {
       implied_prob_home <- 0.50
     } else if (abs(spread) < 3) {
@@ -1070,14 +951,11 @@ function(input, output, session) {
     
     implied_prob_home <- max(0.05, min(0.95, implied_prob_home))
     
-    # Calculate edge
     edge_home <- (prob_home - implied_prob_home) * 100
     edge_away <- (prob_away - (1 - implied_prob_home)) * 100
     
     value_threshold <- 5
     
-    # Calculate EV for both teams
-    # Home team EV
     if (actual_spread < 0) {
       home_odds <- ifelse(actual_spread < -7, -200, ifelse(actual_spread < -3, -150, -110))
       home_payout <- 100 / (abs(home_odds) / 100)
@@ -1087,7 +965,6 @@ function(input, output, session) {
     }
     home_ev <- (prob_home * home_payout) - ((1 - prob_home) * 100)
     
-    # Away team EV
     if (actual_spread > 0) {
       away_odds <- ifelse(actual_spread > 7, -200, ifelse(actual_spread > 3, -150, -110))
       away_payout <- 100 / (abs(away_odds) / 100)
@@ -1097,13 +974,10 @@ function(input, output, session) {
     }
     away_ev <- (prob_away * away_payout) - ((1 - prob_away) * 100)
     
-    # Determine if there's a value bet (positive EV AND edge > threshold)
     home_has_value <- (edge_home > value_threshold && home_ev > 0)
     away_has_value <- (edge_away > value_threshold && away_ev > 0)
     
-    # Display results
     if (!home_has_value && !away_has_value) {
-      # No value bet found
       tagList(
         p(icon("info-circle"), strong(" No Value Bet Found"), style = "font-size: 16px; color: #6c757d;"),
         p("Model prediction does not show a predicted value bet compared to Vegas odds."),
@@ -1114,7 +988,6 @@ function(input, output, session) {
         p(style = "color: #dc3545; font-weight: bold;", "Negative EV means you would lose money over time on these bets. While negative edge means that Vegas predicts that team to win at a higher probability than the model.")
       )
     } else if (home_has_value && (!away_has_value || home_ev > away_ev)) {
-      # Home team is the value bet
       tagList(
         div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
             p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_home_team))), 
@@ -1132,7 +1005,6 @@ function(input, output, session) {
           style = paste0("color: ", ifelse(home_ev > 15, "#28a745", ifelse(home_ev > 5, "#20c997", "#6c757d")), "; font-weight: bold;"))
       )
     } else {
-      # Away team is the value bet
       tagList(
         div(style = "background-color: #d4edda; padding: 15px; border-radius: 5px; border-left: 5px solid #28a745;",
             p(icon("check-circle"), strong(paste0(" VALUE BET: ", toupper(input$pred_away_team))), 
@@ -1152,7 +1024,6 @@ function(input, output, session) {
     }
   })
   
-  # Model accuracy
   output$model_accuracy <- renderText({
     req(input$predict_btn)
     model_info <- prediction_model()
@@ -1176,7 +1047,6 @@ function(input, output, session) {
     paste0(round(home_rate, 1), "%")
   })
   
-  # Variable importance plot
   output$importance_plot <- renderPlotly({
     req(input$predict_btn)
     model_info <- prediction_model()
@@ -1187,7 +1057,7 @@ function(input, output, session) {
     importance_df <- importance_df %>%
       arrange(desc(MeanDecreaseGini)) %>%
       mutate(Importance = MeanDecreaseGini) %>%
-      head(8)  # Show top 8
+      head(8)
     
     plot_ly(importance_df, 
             x = ~Importance, 
@@ -1207,7 +1077,6 @@ function(input, output, session) {
       )
   })
   
-  # Head-to-head history table
   output$h2h_table <- renderTable({
     req(input$pred_home_team, input$pred_away_team)
     
@@ -1233,15 +1102,10 @@ function(input, output, session) {
     h2h
   })
   
-  # ========================================
-  # CLUSTER ANALYSIS TAB
-  # ========================================
-  
-  # Calculate team statistics for clustering
+  # ========== CLUSTER ANALYSIS ==========
   cluster_team_data <- reactive({
     df <- nfl_data()
     
-    # Calculate comprehensive team stats
     team_stats <- df %>%
       group_by(team_home) %>%
       summarise(
@@ -1283,194 +1147,176 @@ function(input, output, session) {
         total_games = home_games + away_games,
         total_wins = home_wins + away_wins,
         win_pct = round((total_wins / total_games) * 100, 1),
-        
         total_points_scored = home_points_scored + away_points_scored,
         total_points_allowed = home_points_allowed + away_points_allowed,
         avg_points_scored = round(total_points_scored / total_games, 1),
         avg_points_allowed = round(total_points_allowed / total_games, 1),
         point_diff = round((total_points_scored - total_points_allowed) / total_games, 1),
-        
         total_overs = home_overs + away_overs,
         total_unders = home_unders + away_unders,
         over_rate = round((total_overs / (total_overs + total_unders)) * 100, 1),
         under_rate = round((total_unders / (total_overs + total_unders)) * 100, 1),
-        
         total_fav_games = home_fav_games + away_fav_games,
         total_fav_covers = home_fav_covers + away_fav_covers,
         fav_cover_rate = ifelse(total_fav_games > 0, 
                                 round((total_fav_covers / total_fav_games) * 100, 1), 
                                 NA),
-        
         total_dog_games = home_dog_games + away_dog_games,
         total_dog_covers = home_dog_covers + away_dog_covers,
         dog_cover_rate = ifelse(total_dog_games > 0,
                                 round((total_dog_covers / total_dog_games) * 100, 1),
                                 NA),
-        
         home_win_rate = round((home_wins / home_games) * 100, 1),
         away_win_rate = round((away_wins / away_games) * 100, 1)
       ) %>%
       filter(total_games >= 10)
     
-    return(as.data.frame(combined_stats))
+    return(combined_stats)
   })
   
-  # Perform clustering
+  # PCA Analysis
+  pca_results <- reactive({
+    team_data <- cluster_team_data()
+    
+    # Select numeric columns for PCA
+    pca_vars <- c("win_pct", "avg_points_scored", "avg_points_allowed", "point_diff",
+                  "over_rate", "fav_cover_rate", "dog_cover_rate", "home_win_rate", "away_win_rate")
+    
+    # Prepare data - remove rows with NA
+    pca_data <- team_data %>%
+      select(team, all_of(pca_vars)) %>%
+      filter(complete.cases(.))
+    
+    if (nrow(pca_data) < 5) {
+      return(NULL)
+    }
+    
+    # Run PCA
+    pca_matrix <- pca_data %>% select(-team) %>% scale()
+    pca_fit <- prcomp(pca_matrix, center = FALSE, scale. = FALSE)
+    
+    # Get scores
+    scores <- as.data.frame(pca_fit$x)
+    scores$team <- pca_data$team
+    
+    # Get loadings
+    loadings <- as.data.frame(pca_fit$rotation)
+    loadings$variable <- rownames(loadings)
+    
+    # Variance explained
+    var_explained <- summary(pca_fit)$importance[2, ] * 100
+    
+    return(list(
+      scores = scores,
+      loadings = loadings,
+      var_explained = var_explained,
+      pca_fit = pca_fit
+    ))
+  })
+  
+  # K-means clustering results
   cluster_results <- reactive({
     req(input$cluster_factor1, input$cluster_factor2, input$n_clusters)
     
     team_data <- cluster_team_data()
+    
     factors <- c(input$cluster_factor1, input$cluster_factor2)
     
-    if(length(unique(factors)) != 2) {
+    if (length(unique(factors)) != 2) {
       return(NULL)
     }
     
-    # Select and clean data
-    cluster_subset <- team_data[, c("team", factors[1], factors[2])]
-    cluster_subset <- cluster_subset[complete.cases(cluster_subset), ]
+    cluster_data <- team_data %>%
+      select(team, all_of(factors))
     
-    if(nrow(cluster_subset) < input$n_clusters) {
+    cluster_data <- cluster_data %>%
+      filter(complete.cases(.))
+    
+    if (nrow(cluster_data) < input$n_clusters) {
       return(NULL)
     }
     
-    # Extract numeric values
-    vals1 <- cluster_subset[[factors[1]]]
-    vals2 <- cluster_subset[[factors[2]]]
+    cluster_data$x_axis <- cluster_data[[factors[1]]]
+    cluster_data$y_axis <- cluster_data[[factors[2]]]
     
-    # Create matrix
-    mat <- cbind(vals1, vals2)
-    mat_scaled <- scale(mat)
+    cluster_matrix <- cluster_data %>%
+      select(all_of(factors)) %>%
+      scale()
     
-    # PCA if needed
-    if(input$use_pca) {
-      pca <- prcomp(mat_scaled)
-      x_vals <- pca$x[, 1]
-      y_vals <- pca$x[, 2]
-      use_pca_flag <- TRUE
-    } else {
-      x_vals <- vals1
-      y_vals <- vals2
-      use_pca_flag <- FALSE
-    }
-    
-    # Clustering
     set.seed(123)
-    if(input$use_pca) {
-      km <- kmeans(cbind(x_vals, y_vals), centers = input$n_clusters, nstart = 25)
-    } else {
-      km <- kmeans(mat_scaled, centers = input$n_clusters, nstart = 25)
-    }
+    kmeans_result <- kmeans(cluster_matrix, centers = input$n_clusters, nstart = 25)
     
-    # Build result dataframe
-    result_df <- data.frame(
-      team = cluster_subset$team,
-      x_axis = x_vals,
-      y_axis = y_vals,
-      original_factor1 = vals1,
-      original_factor2 = vals2,
-      cluster = as.character(km$cluster),
-      stringsAsFactors = FALSE
-    )
+    cluster_data$original_cluster <- kmeans_result$cluster
     
-    list(
-      data = result_df,
+    cluster_centers <- cluster_data %>%
+      group_by(original_cluster) %>%
+      summarise(
+        center_x = mean(x_axis),
+        center_y = mean(y_axis),
+        .groups = "drop"
+      ) %>%
+      arrange(desc(center_y), desc(center_x)) %>%
+      mutate(new_cluster = row_number())
+    
+    cluster_data <- cluster_data %>%
+      left_join(cluster_centers %>% select(original_cluster, new_cluster), 
+                by = "original_cluster") %>%
+      mutate(cluster = as.factor(new_cluster)) %>%
+      select(-original_cluster, -new_cluster)
+    
+    return(list(
+      data = cluster_data,
+      kmeans = kmeans_result,
       factors = factors,
-      use_pca = use_pca_flag
-    )
+      centers = cluster_centers
+    ))
   })
   
-  # Cluster plot
+  # Main cluster/PCA plot
   output$cluster_plot <- renderPlotly({
-    results <- cluster_results()
     
-    if(is.null(results)) {
-      return(plot_ly() %>% 
-               layout(title = "Please select 2 different factors"))
-    }
-    
-    df <- results$data
-    factors <- results$factors
-    
-    factor_labels <- c(
-      "win_pct" = "Win %",
-      "avg_points_scored" = "Avg Points Scored",
-      "avg_points_allowed" = "Avg Points Allowed",
-      "point_diff" = "Point Differential",
-      "over_rate" = "Over Hit %",
-      "under_rate" = "Under Hit %",
-      "fav_cover_rate" = "Favorite Cover %",
-      "dog_cover_rate" = "Underdog Cover %",
-      "home_win_rate" = "Home Win %",
-      "away_win_rate" = "Away Win %"
-    )
-    
-    if(results$use_pca) {
-      x_label <- "Principal Component 1"
-      y_label <- "Principal Component 2"
-      title_text <- "Team Clusters (PCA)"
-    } else {
-      x_label <- factor_labels[factors[1]]
-      y_label <- factor_labels[factors[2]]
-      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
-    }
-    
-    # Build plot step by step
-    p <- plot_ly()
-    
-    # Add traces by cluster
-    for(clust in unique(df$cluster)) {
-      subset_df <- df[df$cluster == clust, ]
+    if (input$analysis_method == "pca") {
+      # PCA Plot
+      results <- pca_results()
       
-      p <- p %>%
-        add_trace(
-          x = subset_df$x_axis,
-          y = subset_df$y_axis,
-          text = subset_df$team,
-          type = 'scatter',
-          mode = 'markers+text',
-          textposition = 'top center',
-          marker = list(size = 12),
-          name = paste("Cluster", clust),
-          hovertext = paste0(
-            "<b>", subset_df$team, "</b><br>",
-            "Cluster: ", clust, "<br>",
-            x_label, ": ", round(subset_df$x_axis, 1), "<br>",
-            y_label, ": ", round(subset_df$y_axis, 1)
-          ),
-          hoverinfo = 'text'
+      if (is.null(results)) {
+        return(plot_ly() %>% 
+                 layout(title = "Not enough data for PCA analysis"))
+      }
+      
+      scores <- results$scores
+      var_explained <- results$var_explained
+      
+      plot_ly(scores, x = ~PC1, y = ~PC2,
+              type = 'scatter', mode = 'markers+text',
+              text = ~team,
+              textposition = 'top center',
+              marker = list(size = 12, color = '#1f77b4'),
+              hovertext = ~paste0(
+                "<b>", team, "</b><br>",
+                "PC1: ", round(PC1, 2), "<br>",
+                "PC2: ", round(PC2, 2)
+              ),
+              hoverinfo = 'text') %>%
+        layout(
+          title = paste0("PCA: Teams by Principal Components"),
+          xaxis = list(title = paste0("PC1 (", round(var_explained[1], 1), "% variance)")),
+          yaxis = list(title = paste0("PC2 (", round(var_explained[2], 1), "% variance)")),
+          showlegend = FALSE
         )
-    }
-    
-    p %>% layout(
-      title = title_text,
-      xaxis = list(title = x_label),
-      yaxis = list(title = y_label),
-      showlegend = TRUE
-    )
-  })
-  
-  # Cluster summary table
-  output$cluster_summary_table <- renderTable({
-    results <- cluster_results()
-    
-    if(is.null(results)) {
-      return(data.frame(Message = "Please select 2 different factors"))
-    }
-    
-    df <- results$data
-    factors <- results$factors
-    
-    if(results$use_pca) {
-      summary <- df %>%
-        group_by(cluster) %>%
-        summarise(
-          Teams = n(),
-          `PC1 (Avg)` = round(mean(x_axis), 2),
-          `PC2 (Avg)` = round(mean(y_axis), 2),
-          .groups = "drop"
-        )
+      
     } else {
+      # K-means Plot
+      results <- cluster_results()
+      
+      if (is.null(results)) {
+        return(plot_ly() %>% 
+                 layout(title = "Please select 2 different factors or ensure enough data is available"))
+      }
+      
+      data <- results$data
+      factors <- results$factors
+      
       factor_labels <- c(
         "win_pct" = "Win %",
         "avg_points_scored" = "Avg Points Scored",
@@ -1484,35 +1330,153 @@ function(input, output, session) {
         "away_win_rate" = "Away Win %"
       )
       
-      summary <- df %>%
-        group_by(cluster) %>%
-        summarise(
-          Teams = n(),
-          F1 = round(mean(original_factor1), 1),
-          F2 = round(mean(original_factor2), 1),
-          .groups = "drop"
-        )
+      x_label <- factor_labels[factors[1]]
+      y_label <- factor_labels[factors[2]]
+      title_text <- paste("Team Clusters by", x_label, "vs", y_label)
       
-      names(summary)[3] <- factor_labels[factors[1]]
-      names(summary)[4] <- factor_labels[factors[2]]
+      plot_ly(data, x = ~x_axis, y = ~y_axis, color = ~cluster,
+              type = 'scatter', mode = 'markers+text',
+              text = ~team,
+              textposition = 'top center',
+              marker = list(size = 12),
+              hovertext = ~paste0(
+                "<b>", team, "</b><br>",
+                "Cluster: ", cluster, "<br>",
+                x_label, ": ", round(x_axis, 1), "<br>",
+                y_label, ": ", round(y_axis, 1)
+              ),
+              hoverinfo = 'text') %>%
+        layout(
+          title = title_text,
+          xaxis = list(title = x_label),
+          yaxis = list(title = y_label),
+          showlegend = TRUE
+        )
     }
-    
-    names(summary)[1] <- "Cluster"
-    summary
   })
   
-  # Teams by cluster table
-  output$cluster_teams_table <- renderTable({
+  # PCA Loadings plot
+  output$pca_loadings_plot <- renderPlotly({
+    results <- pca_results()
+    
+    if (is.null(results)) {
+      return(NULL)
+    }
+    
+    loadings <- results$loadings
+    
+    # Pretty labels
+    var_labels <- c(
+      "win_pct" = "Win %",
+      "avg_points_scored" = "Avg Pts Scored",
+      "avg_points_allowed" = "Avg Pts Allowed",
+      "point_diff" = "Point Diff",
+      "over_rate" = "Over Rate",
+      "fav_cover_rate" = "Fav Cover %",
+      "dog_cover_rate" = "Dog Cover %",
+      "home_win_rate" = "Home Win %",
+      "away_win_rate" = "Away Win %"
+    )
+    
+    loadings$label <- var_labels[loadings$variable]
+    
+    plot_ly(loadings, x = ~PC1, y = ~PC2,
+            type = 'scatter', mode = 'markers+text',
+            text = ~label,
+            textposition = 'top center',
+            marker = list(size = 10, color = '#d62728'),
+            hovertext = ~paste0(
+              "<b>", label, "</b><br>",
+              "PC1 Loading: ", round(PC1, 3), "<br>",
+              "PC2 Loading: ", round(PC2, 3)
+            ),
+            hoverinfo = 'text') %>%
+      layout(
+        title = "PCA Loadings (Variable Contributions)",
+        xaxis = list(title = "PC1 Loading", zeroline = TRUE),
+        yaxis = list(title = "PC2 Loading", zeroline = TRUE),
+        showlegend = FALSE
+      )
+  })
+  
+  # Variance explained table
+  output$pca_variance_table <- renderTable({
+    results <- pca_results()
+    
+    if (is.null(results)) {
+      return(data.frame(Message = "Not enough data for PCA"))
+    }
+    
+    var_exp <- results$var_explained
+    
+    data.frame(
+      Component = paste0("PC", 1:min(5, length(var_exp))),
+      `Variance Explained` = paste0(round(var_exp[1:min(5, length(var_exp))], 1), "%"),
+      `Cumulative` = paste0(round(cumsum(var_exp)[1:min(5, length(var_exp))], 1), "%"),
+      check.names = FALSE
+    )
+  })
+  
+  output$cluster_summary_table <- renderTable({
+    if (input$analysis_method == "pca") {
+      return(NULL)
+    }
+    
     results <- cluster_results()
     
-    if(is.null(results)) {
+    if (is.null(results)) {
       return(data.frame(Message = "Please select 2 different factors"))
     }
     
-    df <- results$data
+    data <- results$data
+    factors <- results$factors
     
-    teams_by_cluster <- df %>%
-      arrange(cluster, team) %>%
+    summary <- data %>%
+      group_by(cluster) %>%
+      summarise(
+        Teams = n(),
+        across(all_of(factors), ~round(mean(.x, na.rm = TRUE), 1)),
+        .groups = "drop"
+      ) %>%
+      arrange(as.numeric(as.character(cluster)))
+    
+    names(summary)[1] <- "Cluster"
+    
+    return(summary)
+  })
+  
+  output$cluster_teams_table <- renderTable({
+    if (input$analysis_method == "pca") {
+      # For PCA, show teams sorted by PC1
+      results <- pca_results()
+      
+      if (is.null(results)) {
+        return(data.frame(Message = "Not enough data for PCA"))
+      }
+      
+      scores <- results$scores %>%
+        arrange(desc(PC1)) %>%
+        mutate(
+          PC1 = round(PC1, 2),
+          PC2 = round(PC2, 2)
+        ) %>%
+        select(team, PC1, PC2)
+      
+      names(scores) <- c("Team", "PC1 Score", "PC2 Score")
+      
+      return(scores)
+    }
+    
+    results <- cluster_results()
+    
+    if (is.null(results)) {
+      return(data.frame(Message = "Please select 2 different factors"))
+    }
+    
+    data <- results$data
+    
+    teams_by_cluster <- data %>%
+      arrange(as.numeric(as.character(cluster)), team) %>%
       group_by(cluster) %>%
       summarise(
         Teams = paste(team, collapse = ", "),
@@ -1520,34 +1484,62 @@ function(input, output, session) {
       )
     
     names(teams_by_cluster)[1] <- "Cluster"
-    teams_by_cluster
+    
+    return(teams_by_cluster)
   })
   
+  # Dynamic title for teams table
+  output$teams_table_title <- renderUI({
+    if (input$analysis_method == "pca") {
+      "Team PCA Scores"
+    } else {
+      "Teams by Cluster"
+    }
+  })
   
+  # Navigate to stadium map
+  observeEvent(input$go_to_map, {
+    updateTabItems(session, "tabs", "analytics")
+  })
   
-  # ========================================
-  # BETTING LIBRARY TAB
-  # ========================================
-  nfl_teams <- c("Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills",
-                 "Carolina Panthers", "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns",
-                 "Dallas Cowboys", "Denver Broncos", "Detroit Lions", "Green Bay Packers",
-                 "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Kansas City Chiefs",
-                 "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins",
-                 "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants",
-                 "New York Jets", "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers",
-                 "Seattle Seahawks", "Tampa Bay Buccaneers", "Tennessee Titans", "Washington Commanders")
+  # Download handlers
+  output$download_betting_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_betting_analysis_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv(analysis_data(), file, row.names = FALSE)
+    }
+  )
   
-  # ========================================
-# BETTING LIBRARY TAB
-# ========================================
-  # ========================================
-  # BETTING LIBRARY STORAGE
-  # ========================================
+  output$download_roi_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_roi_results_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      data <- roi_results() %>%
+        select(schedule_season, schedule_week, team_home, team_away, 
+               bet_won, profit, cumulative_profit)
+      write.csv(data, file, row.names = FALSE)
+    }
+  )
   
-  # Initialize betting library storage FIRST
-  # Initialize betting library storage FIRST
-  betting_library <- reactiveValues(
-    bets = data.frame(
+  output$download_cluster_data <- downloadHandler(
+    filename = function() {
+      paste0("nfl_cluster_analysis_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      results <- cluster_results()
+      if (!is.null(results)) {
+        write.csv(results$data, file, row.names = FALSE)
+      }
+    }
+  )
+  
+  # ========== BETTING LIBRARY ==========
+  # Helper function to create empty bets data frame
+  create_empty_bets <- function() {
+    data.frame(
       id = character(),
       date = character(),
       is_parlay = logical(),
@@ -1563,168 +1555,135 @@ function(input, output, session) {
       notes = character(),
       stringsAsFactors = FALSE
     )
+  }
+  
+  # Initialize betting library storage
+  betting_library <- reactiveValues(
+    bets = create_empty_bets()
   )
   
-  # Load ALL data from localStorage on startup (PRIORITY = 1)
+  # Load data from localStorage on startup
   observe({
-    priority = 1  # Run this FIRST before anything else
-    
     # Load betting library
     if (!is.null(input$store$betting_library_data)) {
-    stored_bets <- input$store$betting_library_data
-    
-    if(length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
-      tryCatch({
-        betting_library$bets <- do.call(rbind, lapply(stored_bets, function(x) {
-          as.data.frame(lapply(x, function(y) if(is.null(y)) NA else y), stringsAsFactors = FALSE)
-        }))
-        message("Loaded ", nrow(betting_library$bets), " bets from storage")
-      }, error = function(e) {
-        message("Error loading stored bets: ", e$message)
-      })
+      stored_bets <- input$store$betting_library_data
+      
+      if (length(stored_bets) > 0 && !is.null(stored_bets[[1]])) {
+        tryCatch({
+          betting_library$bets <- do.call(rbind, lapply(stored_bets, function(x) {
+            as.data.frame(lapply(x, function(y) if (is.null(y)) NA else y), stringsAsFactors = FALSE)
+          }))
+        }, error = function(e) {
+          message("Error loading stored bets: ", e$message)
+        })
+      }
     }
-  }
+    
+    # Load other stored settings
+    if (!is.null(input$store$stadium_metric)) {
+      updateRadioButtons(session, "metric", selected = input$store$stadium_metric)
+    }
+    if (!is.null(input$store$stadium_year_range)) {
+      updateSliderInput(session, "stadium_year_range", value = input$store$stadium_year_range)
+    }
+    if (!is.null(input$store$stadium_select)) {
+      updateSelectInput(session, "stadium_select", selected = input$store$stadium_select)
+    }
+    if (!is.null(input$store$bet_analysis_type)) {
+      updateSelectInput(session, "bet_type", selected = input$store$bet_analysis_type)
+    }
+    if (!is.null(input$store$bet_analysis_factor)) {
+      updateSelectInput(session, "factor", selected = input$store$bet_analysis_factor)
+    }
+    if (!is.null(input$store$roi_strategy)) {
+      updateSelectInput(session, "roi_strategy", selected = input$store$roi_strategy)
+    }
+    if (!is.null(input$store$roi_bet_amount)) {
+      updateSliderInput(session, "roi_bet_amount", value = input$store$roi_bet_amount)
+    }
+    if (!is.null(input$store$roi_year_range)) {
+      updateSliderInput(session, "roi_year_range", value = input$store$roi_year_range)
+    }
+    if (!is.null(input$store$roi_team_filter)) {
+      updateSelectInput(session, "roi_team_filter", selected = input$store$roi_team_filter)
+    }
+    if (!is.null(input$store$cluster_factor1)) {
+      updateSelectInput(session, "cluster_factor1", selected = input$store$cluster_factor1)
+    }
+    if (!is.null(input$store$cluster_factor2)) {
+      updateSelectInput(session, "cluster_factor2", selected = input$store$cluster_factor2)
+    }
+    if (!is.null(input$store$n_clusters)) {
+      updateSliderInput(session, "n_clusters", value = input$store$n_clusters)
+    }
+  })
   
-  # Load Stadium Map filters
-  if (!is.null(input$store$stadium_metric)) {
-    updateRadioButtons(session, "metric", selected = input$store$stadium_metric)
-  }
-  if (!is.null(input$store$stadium_year_range)) {
-    updateSliderInput(session, "stadium_year_range", value = input$store$stadium_year_range)
-  }
-  if (!is.null(input$store$stadium_select)) {
-    updateSelectInput(session, "stadium_select", selected = input$store$stadium_select)
-  }
+  # Save betting library whenever it changes
+  observeEvent(betting_library$bets, {
+    if (nrow(betting_library$bets) > 0) {
+      data_list <- lapply(1:nrow(betting_library$bets), function(i) {
+        as.list(betting_library$bets[i, ])
+      })
+      updateStore(session, "betting_library_data", data_list)
+    } else {
+      # Explicitly save empty list when no bets
+      updateStore(session, "betting_library_data", list())
+    }
+  }, ignoreInit = TRUE)
   
-  # Load Betting Analysis filters
-  if (!is.null(input$store$bet_analysis_type)) {
-    updateSelectInput(session, "bet_type", selected = input$store$bet_analysis_type)
-  }
-  if (!is.null(input$store$bet_analysis_factor)) {
-    updateSelectInput(session, "factor", selected = input$store$bet_analysis_factor)
-  }
+  # Save other settings
+  observeEvent(input$metric, {
+    updateStore(session, "stadium_metric", input$metric)
+  }, ignoreInit = TRUE)
   
-  # Load ROI Calculator settings
-  if (!is.null(input$store$roi_strategy)) {
-    updateSelectInput(session, "roi_strategy", selected = input$store$roi_strategy)
-  }
-  if (!is.null(input$store$roi_bet_amount)) {
-    updateSliderInput(session, "roi_bet_amount", value = input$store$roi_bet_amount)
-  }
-  if (!is.null(input$store$roi_year_range)) {
-    updateSliderInput(session, "roi_year_range", value = input$store$roi_year_range)
-  }
-  if (!is.null(input$store$roi_team_filter)) {
-    updateSelectInput(session, "roi_team_filter", selected = input$store$roi_team_filter)
-  }
+  observeEvent(input$stadium_year_range, {
+    updateStore(session, "stadium_year_range", input$stadium_year_range)
+  }, ignoreInit = TRUE)
   
-  # Load Cluster Analysis settings
-  if (!is.null(input$store$cluster_factor1)) {
-    updateSelectInput(session, "cluster_factor1", selected = input$store$cluster_factor1)
-  }
-  if (!is.null(input$store$cluster_factor2)) {
-    updateSelectInput(session, "cluster_factor2", selected = input$store$cluster_factor2)
-  }
-  if (!is.null(input$store$n_clusters)) {
-    updateSliderInput(session, "n_clusters", value = input$store$n_clusters)
-  }
-  if (!is.null(input$store$use_pca)) {
-    updateCheckboxInput(session, "use_pca", value = input$store$use_pca)
-  }
-})
-
-# Save betting library whenever it changes
-observeEvent(betting_library$bets, {
-  if(nrow(betting_library$bets) > 0) {
-    data_list <- lapply(1:nrow(betting_library$bets), function(i) {
-      as.list(betting_library$bets[i, ])
-    })
-    updateStore(session, "betting_library_data", data_list)
-    message("Saved ", nrow(betting_library$bets), " bets to storage")
-  } else {
-    updateStore(session, "betting_library_data", list())
-    message("Cleared storage")
-  }
-}, ignoreInit = TRUE)
-
-# Save Stadium Map filters
-observeEvent(input$metric, {
-  updateStore(session, "stadium_metric", input$metric)
-}, ignoreInit = TRUE)
-
-observeEvent(input$stadium_year_range, {
-  updateStore(session, "stadium_year_range", input$stadium_year_range)
-}, ignoreInit = TRUE)
-
-observeEvent(input$stadium_select, {
-  updateStore(session, "stadium_select", input$stadium_select)
-}, ignoreInit = TRUE)
-
-# Save Betting Analysis filters
-observeEvent(input$bet_type, {
-  updateStore(session, "bet_analysis_type", input$bet_type)
-}, ignoreInit = TRUE)
-
-observeEvent(input$factor, {
-  updateStore(session, "bet_analysis_factor", input$factor)
-}, ignoreInit = TRUE)
-
-# Save ROI Calculator settings
-observeEvent(input$roi_strategy, {
-  updateStore(session, "roi_strategy", input$roi_strategy)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_bet_amount, {
-  updateStore(session, "roi_bet_amount", input$roi_bet_amount)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_year_range, {
-  updateStore(session, "roi_year_range", input$roi_year_range)
-}, ignoreInit = TRUE)
-
-observeEvent(input$roi_team_filter, {
-  updateStore(session, "roi_team_filter", input$roi_team_filter)
-}, ignoreInit = TRUE)
-
-# Save Cluster Analysis settings
-observeEvent(input$cluster_factor1, {
-  updateStore(session, "cluster_factor1", input$cluster_factor1)
-}, ignoreInit = TRUE)
-
-observeEvent(input$cluster_factor2, {
-  updateStore(session, "cluster_factor2", input$cluster_factor2)
-}, ignoreInit = TRUE)
-
-observeEvent(input$n_clusters, {
-  updateStore(session, "n_clusters", input$n_clusters)
-}, ignoreInit = TRUE)
-
-observeEvent(input$use_pca, {
-  updateStore(session, "use_pca", input$use_pca)
-}, ignoreInit = TRUE)
-
-# ✅ END OF NEW CODE - Your existing code continues below
-  # Create reactive storage (data persists during session only)
+  observeEvent(input$stadium_select, {
+    updateStore(session, "stadium_select", input$stadium_select)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$bet_type, {
+    updateStore(session, "bet_analysis_type", input$bet_type)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$factor, {
+    updateStore(session, "bet_analysis_factor", input$factor)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_strategy, {
+    updateStore(session, "roi_strategy", input$roi_strategy)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_bet_amount, {
+    updateStore(session, "roi_bet_amount", input$roi_bet_amount)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_year_range, {
+    updateStore(session, "roi_year_range", input$roi_year_range)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$roi_team_filter, {
+    updateStore(session, "roi_team_filter", input$roi_team_filter)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$cluster_factor1, {
+    updateStore(session, "cluster_factor1", input$cluster_factor1)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$cluster_factor2, {
+    updateStore(session, "cluster_factor2", input$cluster_factor2)
+  }, ignoreInit = TRUE)
+  
+  observeEvent(input$n_clusters, {
+    updateStore(session, "n_clusters", input$n_clusters)
+  }, ignoreInit = TRUE)
   
   # Get all bets
   all_bets <- reactive({
-    if(nrow(betting_library$bets) == 0) {
-      return(data.frame(
-        id = character(),
-        date = character(),
-        is_parlay = logical(),
-        num_legs = numeric(),
-        home_team = character(),
-        away_team = character(),
-        bet_type = character(),
-        wagered = numeric(),
-        won = numeric(),
-        lost = numeric(),
-        net = numeric(),
-        result = character(),
-        notes = character(),
-        stringsAsFactors = FALSE
-      ))
+    if (nrow(betting_library$bets) == 0) {
+      return(create_empty_bets())
     }
     betting_library$bets %>% arrange(desc(date))
   })
@@ -1734,9 +1693,9 @@ observeEvent(input$use_pca, {
     req(input$lib_amount_wagered)
     
     # Validation for single bets
-    if(!input$lib_is_parlay) {
+    if (!input$lib_is_parlay) {
       req(input$lib_home_team, input$lib_away_team, input$lib_bet_type)
-      if(input$lib_home_team == "" || input$lib_away_team == "") {
+      if (input$lib_home_team == "" || input$lib_away_team == "") {
         showModal(modalDialog(
           title = "Error",
           "Please select both home and away teams.",
@@ -1748,7 +1707,7 @@ observeEvent(input$use_pca, {
     } else {
       # Validation for parlays
       req(input$lib_num_legs, input$lib_parlay_details)
-      if(input$lib_parlay_details == "") {
+      if (input$lib_parlay_details == "") {
         showModal(modalDialog(
           title = "Error",
           "Please enter parlay details.",
@@ -1759,7 +1718,7 @@ observeEvent(input$use_pca, {
       }
     }
     
-    if(input$lib_amount_won == 0 && input$lib_amount_lost == 0) {
+    if (input$lib_amount_won == 0 && input$lib_amount_lost == 0) {
       showModal(modalDialog(
         title = "Error",
         "Please enter either Amount Won or Amount Lost (not both zero).",
@@ -1775,9 +1734,7 @@ observeEvent(input$use_pca, {
     
     bet_id <- paste0("bet_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1000:9999, 1))
     
-    # Create bet based on type
-    if(!input$lib_is_parlay) {
-      # Single bet
+    if (!input$lib_is_parlay) {
       new_bet <- data.frame(
         id = bet_id,
         date = as.character(Sys.Date()),
@@ -1795,7 +1752,6 @@ observeEvent(input$use_pca, {
         stringsAsFactors = FALSE
       )
     } else {
-      # Parlay bet
       new_bet <- data.frame(
         id = bet_id,
         date = as.character(Sys.Date()),
@@ -1829,7 +1785,8 @@ observeEvent(input$use_pca, {
     
     showNotification("Bet added successfully!", type = "message")
   })
-  # Clear all bets
+  
+  # Clear all bets - Show confirmation modal
   observeEvent(input$lib_clear_all, {
     showModal(modalDialog(
       title = "Confirm Delete",
@@ -1841,23 +1798,14 @@ observeEvent(input$use_pca, {
     ))
   })
   
+  # Actually clear all bets when confirmed - FIXED
   observeEvent(input$lib_confirm_clear, {
-    betting_library$bets <- data.frame(
-      id = character(),
-      date = character(),
-      is.parlay = logical(),
-      num_legs = numeric(),
-      home_team = character(),
-      away_team = character(),
-      bet_type = character(),
-      wagered = numeric(),
-      won = numeric(),
-      lost = numeric(),
-      net = numeric(),
-      result = character(),
-      notes = character(),
-      stringsAsFactors = FALSE
-    )
+    # Clear the reactive values
+    betting_library$bets <- create_empty_bets()
+    
+    # Explicitly clear the store
+    updateStore(session, "betting_library_data", list())
+    
     removeModal()
     showNotification("All bets cleared!", type = "warning")
   })
@@ -1870,14 +1818,14 @@ observeEvent(input$use_pca, {
   
   output$lib_total_wagered <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("$0")
+    if (nrow(bets) == 0) return("$0")
     total <- sum(bets$wagered, na.rm = TRUE)
     paste0("$", formatC(total, format = "f", digits = 0, big.mark = ","))
   })
   
   output$lib_net_profit <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("$0")
+    if (nrow(bets) == 0) return("$0")
     net <- sum(bets$net, na.rm = TRUE)
     sign <- ifelse(net >= 0, "+", "")
     paste0(sign, "$", formatC(net, format = "f", digits = 0, big.mark = ","))
@@ -1885,31 +1833,29 @@ observeEvent(input$use_pca, {
   
   output$lib_win_rate <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("0%")
+    if (nrow(bets) == 0) return("0%")
     wins <- sum(bets$result == "Won", na.rm = TRUE)
     paste0(round((wins / nrow(bets)) * 100, 1), "%")
   })
   
   output$lib_streak <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("No bets")
+    if (nrow(bets) == 0) return("No bets")
     
-    # Sort by date (most recent first)
     bets <- bets %>% arrange(desc(date))
     
-    # Calculate streak
     current_streak <- 0
     last_result <- bets$result[1]
     
-    for(i in 1:nrow(bets)) {
-      if(bets$result[i] == last_result && last_result %in% c("Won", "Lost")) {
+    for (i in 1:nrow(bets)) {
+      if (bets$result[i] == last_result && last_result %in% c("Won", "Lost")) {
         current_streak <- current_streak + 1
       } else {
         break
       }
     }
     
-    if(current_streak == 0) return("No streak")
+    if (current_streak == 0) return("No streak")
     
     streak_type <- ifelse(last_result == "Won", "W", "L")
     paste0(current_streak, streak_type)
@@ -1917,7 +1863,7 @@ observeEvent(input$use_pca, {
   
   output$lib_best_type <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("N/A")
+    if (nrow(bets) == 0) return("N/A")
     
     type_performance <- bets %>%
       group_by(bet_type) %>%
@@ -1927,24 +1873,24 @@ observeEvent(input$use_pca, {
       ) %>%
       arrange(desc(total_net))
     
-    if(nrow(type_performance) == 0) return("N/A")
+    if (nrow(type_performance) == 0) return("N/A")
     
     type_performance$bet_type[1]
   })
   
   output$lib_avg_bet <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("$0")
+    if (nrow(bets) == 0) return("$0")
     avg <- mean(bets$wagered, na.rm = TRUE)
     paste0("$", formatC(avg, format = "f", digits = 0, big.mark = ","))
   })
   
   output$lib_roi <- renderText({
     bets <- all_bets()
-    if(nrow(bets) == 0) return("0%")
+    if (nrow(bets) == 0) return("0%")
     total_wagered <- sum(bets$wagered, na.rm = TRUE)
     total_net <- sum(bets$net, na.rm = TRUE)
-    if(total_wagered == 0) return("0%")
+    if (total_wagered == 0) return("0%")
     roi <- (total_net / total_wagered) * 100
     sign <- ifelse(roi >= 0, "+", "")
     paste0(sign, round(roi, 1), "%")
@@ -1954,7 +1900,7 @@ observeEvent(input$use_pca, {
   output$lib_bets_table <- DT::renderDataTable({
     bets <- all_bets()
     
-    if(nrow(bets) == 0) {
+    if (nrow(bets) == 0) {
       return(DT::datatable(
         data.frame(Message = "No bets added yet. Add your first bet!"),
         options = list(
@@ -1967,7 +1913,6 @@ observeEvent(input$use_pca, {
       ))
     }
     
-    # Format for display
     display_bets <- bets %>%
       mutate(
         parlay_display = ifelse(is_parlay, "Yes", "No"),
@@ -1993,6 +1938,7 @@ observeEvent(input$use_pca, {
       rownames = FALSE
     )
   })
+  
   # Export CSV
   output$lib_export_csv <- downloadHandler(
     filename = function() {
@@ -2000,7 +1946,7 @@ observeEvent(input$use_pca, {
     },
     content = function(file) {
       bets <- all_bets()
-      if(nrow(bets) > 0) {
+      if (nrow(bets) > 0) {
         export_data <- bets %>%
           select(date, home_team, away_team, bet_type, wagered, won, lost, net, result, notes)
         write.csv(export_data, file, row.names = FALSE)
