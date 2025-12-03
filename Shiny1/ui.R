@@ -506,11 +506,19 @@ ui <- dashboardPage(
                                       tags$span(style="color: #28a745; font-weight: bold;", "Over"), " wins."),
                                     hr(),
                                     h4(" How to Read This Map"),
+                                    p("This map uses ", strong("relative percentages"), " to compare stadiums against each other:"),
                                     tags$ul(
-                                      tags$li(tags$strong("Multiple Circles:"), "Each circle represents one NFL stadium. The size of the circle is proportional to the ", tags$em("number"), " of Overs or Unders that hit at that venue."),
-                                      tags$li(tags$strong("Circle Colors:"), "The gradient (blue to red) shows the ", tags$em("count"), " of that outcome relative to other stadiums. Darker red = more Overs/Unders."),
-                                      tags$li(tags$strong("Click for Details:"), "Click any stadium marker to see the exact count, percentage, and a photo of the venue."),
-                                      tags$li(tags$strong("Percentage Matters:"), "A stadium with 60% Overs means that historically, games there tend to be ", tags$em("higher-scoring"), " than the betting line suggests.")
+                                      tags$li(tags$strong("Circle Size:"), "Sized by ", tags$em("relative percentage"), " - the stadium with the most Overs (or Unders) is the largest circle (100%), and all others are scaled proportionally. A stadium at 50% has half as many as the leader."),
+                                      tags$li(tags$strong("Color Gradient:"), "Blue to Red indicates relative ranking. ", 
+                                              tags$span(style="color: #E8463A; font-weight: bold;", "Red = leader (100%)"), ", ",
+                                              tags$span(style="color: #3B4CC0; font-weight: bold;", "Blue = fewer outcomes"), "."),
+                                      tags$li(tags$strong("Click for Details:"), "Click any stadium marker to see exact counts, game percentages, and how it ranks vs. the leader."),
+                                      tags$li(tags$strong("Hover Labels:"), "Quickly see each stadium's relative percentage and raw count on hover.")
+                                    ),
+                                    tags$div(style = "background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #013369; margin: 15px 0;",
+                                             p(style = "margin: 0;", icon("info-circle"), " ",
+                                               strong("Why Relative %?"), " Raw counts are misleading - a stadium with 200 games will have more overs than one with 50 games. Relative % answers: ",
+                                               tags$em("'Which stadium has the MOST overs/unders compared to all others?'"))
                                     ),
                                     hr(),
                                     h4(" Why This Matters for Bettors"),
@@ -523,8 +531,9 @@ ui <- dashboardPage(
                                     ),
                                     p(style = "background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;",
                                       icon("chart-line"), " ", tags$strong("Pro Tip:"), 
-                                      " If a stadium shows 58%+ Overs over 200+ games, it's statistically significant. ",
-                                      "Bettors can use this trend when that stadium hosts future games.")
+                                      " Look for the ", tags$span(style="color: #E8463A; font-weight: bold;", "largest red circles"), 
+                                      " - these stadiums have historically produced the most Overs/Unders. ",
+                                      "Combine this with the popup's '% of games' stat to find venues with both high volume AND high hit rate.")
                            )
                        )
                 )

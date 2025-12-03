@@ -638,29 +638,37 @@ function(input, output, session) {
       return(leaflet() %>% addTiles() %>% setView(lng = -98, lat = 39, zoom = 4))
     }
     
+    # Calculate max values for relative percentage scaling
+    max_overs <- max(data$overs, na.rm = TRUE)
+    max_unders <- max(data$unders, na.rm = TRUE)
+    
     if (input$metric == "overs") {
+      # Calculate relative percentage (stadium with most overs = 100%)
+      data$relative_pct <- round((data$overs / max_overs) * 100, 1)
       data$display_count <- data$overs
       metric_label <- "Overs"
       
       color_palette <- colorNumeric(
         palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),
-        domain = c(min(data$overs), max(data$overs))
+        domain = c(0, 100)
       )
-      data$circle_color <- color_palette(data$overs)
-      legend_title <- "# of Overs"
-      legend_values <- data$overs
+      data$circle_color <- color_palette(data$relative_pct)
+      legend_title <- "% of Max Overs"
+      legend_values <- data$relative_pct
       
     } else {
+      # Calculate relative percentage (stadium with most unders = 100%)
+      data$relative_pct <- round((data$unders / max_unders) * 100, 1)
       data$display_count <- data$unders
       metric_label <- "Unders"
       
       color_palette <- colorNumeric(
         palette = c("#3B4CC0", "#7896D8", "#B4D79E", "#F6EB61", "#E8463A"),
-        domain = c(min(data$unders), max(data$unders))
+        domain = c(0, 100)
       )
-      data$circle_color <- color_palette(data$unders)
-      legend_title <- "# of Unders"
-      legend_values <- data$unders
+      data$circle_color <- color_palette(data$relative_pct)
+      legend_title <- "% of Max Unders"
+      legend_values <- data$relative_pct
     }
     
     data$popup_html <- sapply(1:nrow(data), function(i) {
@@ -681,8 +689,11 @@ function(input, output, session) {
         image_tag,
         "<h4 style='margin: 5px 0;'>", data$stadium[i], "</h4>",
         "<b>Total Games:</b> ", data$total_games[i], "<br>",
-        "<b>Overs:</b> ", data$overs[i], " (", data$over_pct[i], "%)<br>",
-        "<b>Unders:</b> ", data$unders[i], " (", round(100 - data$over_pct[i], 1), "%)<br>",
+        "<b>Overs:</b> ", data$overs[i], " (", data$over_pct[i], "% of games)<br>",
+        "<b>Unders:</b> ", data$unders[i], " (", round(100 - data$over_pct[i], 1), "% of games)<br>",
+        "<hr style='margin: 8px 0;'>",
+        "<b>Relative Rank:</b> ", data$relative_pct[i], "% of leader<br>",
+        "<small style='color: #666;'>(vs stadium with most ", metric_label, ")</small>",
         "</div>"
       )
     })
@@ -704,13 +715,13 @@ function(input, output, session) {
       addCircleMarkers(
         lng = ~longitude,
         lat = ~latitude,
-        radius = ~sqrt(display_count) * 3 + 5,
+        radius = ~(relative_pct / 100) * 20 + 5,  # Scale size by relative %, min 5, max 25
         fillColor = ~circle_color,
         color = "#ffffff",
         weight = 2,
         fillOpacity = 0.7,
         popup = ~popup_html,
-        label = ~paste0(stadium, ": ", over_pct, "% Overs (", display_count, " ", metric_label, ")")
+        label = ~paste0(stadium, ": ", relative_pct, "% of max (", display_count, " ", metric_label, ")")
       ) %>%
       addLegend(
         position = "bottomright",
