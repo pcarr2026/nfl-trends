@@ -1954,4 +1954,3 @@ function(input, output, session) {
     }
   )
 }
-print('tect')

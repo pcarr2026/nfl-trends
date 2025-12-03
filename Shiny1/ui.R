@@ -9,7 +9,6 @@ library(htmltools)
 library(shinyStore)
 library(DT)
 library(randomForest)
-print('text')
 
 # NFL Teams list (shared across UI)
 nfl_teams <- c(
